@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { TrendingUp, TrendingDown, RefreshCw, Search, ChevronRight, Lock } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { TrendingUp, TrendingDown, RefreshCw, Search, ChevronRight } from 'lucide-react';
 import { CompanyInfo } from '@/components/layout/Header';
 import { SectionCard } from '../analysis/SectionCard';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface StockData {
   ticker: string;
+  companyName: string;
   price: number;
   previousClose: number;
   change: number;
@@ -16,13 +17,17 @@ interface StockData {
   marketState: string;
   dayHigh: number;
   dayLow: number;
+  dayOpen: number;
   fiftyTwoWeekHigh: number;
   fiftyTwoWeekLow: number;
   volume: number;
   avgVolume: number;
+  marketCap?: number;
   history: {
     timestamps: number[];
     prices: number[];
+    range: string;
+    rangeLabel: string;
   };
 }
 
@@ -38,6 +43,18 @@ interface StockCardProps {
   companyName?: string;
   companyInfo?: CompanyInfo | null;
 }
+
+type TimeRange = '1d' | '5d' | '1mo' | 'ytd' | '1y' | '2y' | '5y';
+
+const TIME_RANGES: { value: TimeRange; label: string }[] = [
+  { value: '1d', label: '1D' },
+  { value: '5d', label: '5D' },
+  { value: '1mo', label: '1M' },
+  { value: 'ytd', label: 'YTD' },
+  { value: '1y', label: '1Y' },
+  { value: '2y', label: '2Y' },
+  { value: '5y', label: '5Y' },
+];
 
 function formatNumber(num: number): string {
   if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
@@ -55,26 +72,42 @@ function formatCurrency(num: number, currency: string): string {
   }).format(num);
 }
 
-// Simple SVG line chart component
-function MiniChart({
+function formatDate(timestamp: number, range: string): string {
+  const date = new Date(timestamp);
+  if (range === '1d') {
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  } else if (range === '5d' || range === '1mo') {
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  } else {
+    return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+  }
+}
+
+// Improved SVG chart with axes
+function StockChart({
   data,
-  isPositive
+  timestamps,
+  isPositive,
+  range,
+  currency
 }: {
   data: number[];
+  timestamps: number[];
   isPositive: boolean;
+  range: string;
+  currency: string;
 }) {
   if (!data || data.length < 2) {
     return (
-      <div className="w-full h-[120px] flex items-center justify-center text-zinc-500 text-sm">
+      <div className="w-full h-[200px] flex items-center justify-center text-zinc-500 text-sm">
         Insufficient data for chart
       </div>
     );
   }
 
-  // Use fixed dimensions for consistent rendering
-  const width = 500;
-  const height = 120;
-  const padding = { top: 15, right: 15, bottom: 15, left: 15 };
+  const width = 600;
+  const height = 200;
+  const padding = { top: 20, right: 60, bottom: 35, left: 10 };
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
 
@@ -82,19 +115,39 @@ function MiniChart({
   const maxPrice = Math.max(...data);
   const priceRange = maxPrice - minPrice || 1;
 
+  // Add padding to price range
+  const pricePadding = priceRange * 0.1;
+  const adjustedMin = minPrice - pricePadding;
+  const adjustedMax = maxPrice + pricePadding;
+  const adjustedRange = adjustedMax - adjustedMin;
+
+  // Generate chart points
   const points = data.map((price, i) => {
     const x = padding.left + (i / (data.length - 1)) * chartWidth;
-    const y = padding.top + chartHeight - ((price - minPrice) / priceRange) * chartHeight;
-    return { x, y };
+    const y = padding.top + chartHeight - ((price - adjustedMin) / adjustedRange) * chartHeight;
+    return { x, y, price, timestamp: timestamps[i] };
   });
 
   const pathD = `M ${points.map(p => `${p.x},${p.y}`).join(' L ')}`;
-
-  // Create gradient fill path
   const fillPathD = `M ${padding.left},${padding.top + chartHeight} L ${points.map(p => `${p.x},${p.y}`).join(' L ')} L ${padding.left + chartWidth},${padding.top + chartHeight} Z`;
 
   const color = isPositive ? '#10b981' : '#ef4444';
-  const gradientId = `chart-gradient-${isPositive ? 'green' : 'red'}`;
+  const gradientId = `chart-gradient-${isPositive ? 'green' : 'red'}-${Math.random().toString(36).substr(2, 9)}`;
+
+  // Y-axis labels (5 price levels)
+  const yLabels = Array.from({ length: 5 }, (_, i) => {
+    const price = adjustedMin + (adjustedRange * (4 - i)) / 4;
+    const y = padding.top + (chartHeight * i) / 4;
+    return { price, y };
+  });
+
+  // X-axis labels (5-6 time labels)
+  const xLabelCount = 6;
+  const xLabels = Array.from({ length: xLabelCount }, (_, i) => {
+    const index = Math.floor((i / (xLabelCount - 1)) * (timestamps.length - 1));
+    const x = padding.left + (index / (data.length - 1)) * chartWidth;
+    return { timestamp: timestamps[index], x };
+  });
 
   return (
     <div className="w-full">
@@ -107,37 +160,92 @@ function MiniChart({
       >
         <defs>
           <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor={color} stopOpacity="0.4" />
-            <stop offset="100%" stopColor={color} stopOpacity="0.05" />
+            <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+            <stop offset="100%" stopColor={color} stopOpacity="0.02" />
           </linearGradient>
         </defs>
+
+        {/* Grid lines */}
+        {yLabels.map((label, i) => (
+          <line
+            key={`grid-${i}`}
+            x1={padding.left}
+            y1={label.y}
+            x2={padding.left + chartWidth}
+            y2={label.y}
+            stroke="#3f3f46"
+            strokeWidth="1"
+            strokeDasharray="4,4"
+            opacity="0.5"
+          />
+        ))}
+
         {/* Gradient fill area */}
         <path d={fillPathD} fill={`url(#${gradientId})`} />
+
         {/* Line */}
         <path
           d={pathD}
           fill="none"
           stroke={color}
-          strokeWidth="2.5"
+          strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
+
         {/* Start point */}
         <circle
           cx={points[0].x}
           cy={points[0].y}
-          r="4"
+          r="3"
           fill={color}
         />
-        {/* End point */}
+
+        {/* End point with glow */}
         <circle
           cx={points[points.length - 1].x}
           cy={points[points.length - 1].y}
-          r="5"
+          r="6"
+          fill={color}
+          opacity="0.3"
+        />
+        <circle
+          cx={points[points.length - 1].x}
+          cy={points[points.length - 1].y}
+          r="4"
           fill={color}
           stroke="white"
           strokeWidth="2"
         />
+
+        {/* Y-axis labels (right side) */}
+        {yLabels.map((label, i) => (
+          <text
+            key={`y-label-${i}`}
+            x={padding.left + chartWidth + 8}
+            y={label.y + 4}
+            fill="#71717a"
+            fontSize="11"
+            fontFamily="system-ui"
+          >
+            {formatCurrency(label.price, currency).replace(/\.00$/, '')}
+          </text>
+        ))}
+
+        {/* X-axis labels */}
+        {xLabels.map((label, i) => (
+          <text
+            key={`x-label-${i}`}
+            x={label.x}
+            y={height - 8}
+            fill="#71717a"
+            fontSize="10"
+            fontFamily="system-ui"
+            textAnchor="middle"
+          >
+            {formatDate(label.timestamp, range)}
+          </text>
+        ))}
       </svg>
     </div>
   );
@@ -152,6 +260,8 @@ export function StockCard({ ticker: initialTicker, companyName, companyInfo }: S
   const [activeTicker, setActiveTicker] = useState(initialTicker || '');
   const [tickerOptions, setTickerOptions] = useState<TickerOption[]>([]);
   const [showOptions, setShowOptions] = useState(false);
+  const [selectedRange, setSelectedRange] = useState<TimeRange>('1y');
+  const [chartLoading, setChartLoading] = useState(false);
 
   // Check if company is known to be private
   const isPrivate = companyInfo && (
@@ -159,20 +269,6 @@ export function StockCard({ ticker: initialTicker, companyName, companyInfo }: S
     companyInfo.publicStatus === 'went_private' ||
     companyInfo.publicStatus === 'pre_ipo'
   );
-
-  const getPrivateStatusMessage = () => {
-    if (!companyInfo?.publicStatus) return null;
-    switch (companyInfo.publicStatus) {
-      case 'private':
-        return { title: 'Private Company', subtitle: 'This company is not publicly traded.' };
-      case 'went_private':
-        return { title: 'Formerly Public', subtitle: 'This company was taken private and is no longer publicly traded.' };
-      case 'pre_ipo':
-        return { title: 'Pre-IPO Company', subtitle: 'This company is private but may be planning an IPO.' };
-      default:
-        return null;
-    }
-  };
 
   const searchTickers = async (query: string) => {
     if (!query) return;
@@ -184,10 +280,8 @@ export function StockCard({ ticker: initialTicker, companyName, companyInfo }: S
       const { results } = await response.json();
 
       if (results.length === 1) {
-        // Only one result - auto-select it
-        fetchData(results[0].symbol);
+        fetchData(results[0].symbol, selectedRange);
       } else if (results.length > 1) {
-        // Multiple results - show options
         setTickerOptions(results);
         setShowOptions(true);
       } else {
@@ -200,14 +294,16 @@ export function StockCard({ ticker: initialTicker, companyName, companyInfo }: S
     }
   };
 
-  const fetchData = async (tickerToFetch: string) => {
+  const fetchData = useCallback(async (tickerToFetch: string, range: TimeRange = selectedRange) => {
     if (!tickerToFetch) return;
 
     try {
-      setLoading(true);
+      setChartLoading(true);
+      if (!data) setLoading(true);
       setError(null);
       setShowOptions(false);
-      const response = await fetch(`/api/stock/${encodeURIComponent(tickerToFetch)}`);
+
+      const response = await fetch(`/api/stock/${encodeURIComponent(tickerToFetch)}?range=${range}`);
       if (!response.ok) {
         throw new Error('Failed to fetch stock data');
       }
@@ -219,31 +315,30 @@ export function StockCard({ ticker: initialTicker, companyName, companyInfo }: S
       console.error('Stock fetch error:', err);
     } finally {
       setLoading(false);
+      setChartLoading(false);
     }
-  };
+  }, [data, selectedRange]);
 
   useEffect(() => {
-    // Don't search for tickers if company is known to be private
-    if (isPrivate) {
-      return;
-    }
+    if (isPrivate) return;
 
     if (initialTicker) {
-      // If we have an initial ticker, use it directly
       setActiveTicker(initialTicker);
-      fetchData(initialTicker);
-      const interval = setInterval(() => fetchData(initialTicker), 300000);
-      return () => clearInterval(interval);
+      fetchData(initialTicker, selectedRange);
     } else if (companyName) {
-      // No ticker provided - search for it automatically
       searchTickers(companyName);
     }
   }, [initialTicker, companyName, isPrivate]);
 
+  const handleRangeChange = (range: TimeRange) => {
+    setSelectedRange(range);
+    if (activeTicker) {
+      fetchData(activeTicker, range);
+    }
+  };
+
   const handleManualSearch = () => {
     if (manualTicker.trim()) {
-      // If it looks like a ticker (all caps, short), fetch directly
-      // Otherwise, search for it
       const query = manualTicker.trim();
       if (query.length <= 5 && query === query.toUpperCase()) {
         fetchData(query);
@@ -258,32 +353,9 @@ export function StockCard({ ticker: initialTicker, companyName, companyInfo }: S
     fetchData(ticker);
   };
 
-  // Show private company message
+  // For confirmed private companies, don't show the stock card at all
   if (isPrivate) {
-    const privateStatus = getPrivateStatusMessage();
-    return (
-      <SectionCard title="Stock Quote" icon={TrendingUp} color="emerald" className="xl:col-span-2">
-        <div className="py-8 text-center">
-          <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center mx-auto mb-4">
-            <Lock className="w-8 h-8 text-zinc-500" />
-          </div>
-          <h3 className="text-lg font-semibold text-white mb-2">{privateStatus?.title || 'Private Company'}</h3>
-          <p className="text-zinc-400 text-sm max-w-sm mx-auto">
-            {privateStatus?.subtitle || 'Stock data is not available for private companies.'}
-          </p>
-          {companyInfo?.publicStatus === 'went_private' && (
-            <p className="text-zinc-500 text-xs mt-3">
-              Historical SEC filings may still be available in the Investor Documents section.
-            </p>
-          )}
-          {companyInfo?.publicStatus === 'pre_ipo' && (
-            <p className="text-amber-400/70 text-xs mt-3">
-              Watch for S-1 filings if the company proceeds with an IPO.
-            </p>
-          )}
-        </div>
-      </SectionCard>
-    );
+    return null;
   }
 
   // Show loading skeleton
@@ -296,7 +368,7 @@ export function StockCard({ ticker: initialTicker, companyName, companyInfo }: S
             {searching ? `Searching for ${companyName || 'ticker'}...` : 'Loading stock data...'}
           </div>
           <Skeleton className="h-12 w-32 bg-zinc-800" />
-          <Skeleton className="h-[120px] w-full bg-zinc-800" />
+          <Skeleton className="h-[200px] w-full bg-zinc-800" />
           <div className="grid grid-cols-2 gap-4">
             <Skeleton className="h-8 bg-zinc-800" />
             <Skeleton className="h-8 bg-zinc-800" />
@@ -394,9 +466,9 @@ export function StockCard({ ticker: initialTicker, companyName, companyInfo }: S
   }
 
   const isTodayPositive = data.change >= 0;
-  const yearStartPrice = data.history.prices.length > 0 ? data.history.prices[0] : data.price;
-  const yearChange = ((data.price - yearStartPrice) / yearStartPrice) * 100;
-  const isYearPositive = yearChange >= 0;
+  const startPrice = data.history.prices.length > 0 ? data.history.prices[0] : data.price;
+  const rangeChange = ((data.price - startPrice) / startPrice) * 100;
+  const isRangePositive = rangeChange >= 0;
 
   return (
     <SectionCard title="Stock Quote" icon={TrendingUp} color="emerald" className="xl:col-span-2">
@@ -424,81 +496,82 @@ export function StockCard({ ticker: initialTicker, companyName, companyInfo }: S
           </button>
         </div>
 
-        {/* Current Price */}
-        <div className="text-4xl font-bold text-white">
-          {formatCurrency(data.price, data.currency)}
-        </div>
-
-        {/* Two Column Layout: Today vs 1 Year */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {/* Today's Performance */}
-          <div className={`rounded-lg p-4 ${isTodayPositive ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
-            <div className="text-xs text-zinc-400 uppercase tracking-wide mb-2">Today</div>
-            <div className="flex items-center gap-2">
+        {/* Current Price & Change */}
+        <div className="flex items-end justify-between">
+          <div>
+            <div className="text-4xl font-bold text-white">
+              {formatCurrency(data.price, data.currency)}
+            </div>
+            <div className={`flex items-center gap-2 mt-1 ${isTodayPositive ? 'text-emerald-400' : 'text-red-400'}`}>
               {isTodayPositive ? (
-                <TrendingUp className="w-5 h-5 text-emerald-400" />
+                <TrendingUp className="w-4 h-4" />
               ) : (
-                <TrendingDown className="w-5 h-5 text-red-400" />
+                <TrendingDown className="w-4 h-4" />
               )}
-              <span className={`text-xl font-bold ${isTodayPositive ? 'text-emerald-400' : 'text-red-400'}`}>
-                {isTodayPositive ? '+' : ''}{data.changePercent.toFixed(2)}%
+              <span className="font-semibold">
+                {isTodayPositive ? '+' : ''}{formatCurrency(data.change, data.currency)} ({isTodayPositive ? '+' : ''}{data.changePercent.toFixed(2)}%)
               </span>
-            </div>
-            <div className={`text-sm mt-1 ${isTodayPositive ? 'text-emerald-400/70' : 'text-red-400/70'}`}>
-              {isTodayPositive ? '+' : ''}{formatCurrency(data.change, data.currency)}
-            </div>
-            <div className="text-xs text-zinc-500 mt-2">
-              Prev Close: {formatCurrency(data.previousClose, data.currency)}
+              <span className="text-zinc-500 text-sm">Today</span>
             </div>
           </div>
-
-          {/* 1 Year Performance */}
-          <div className={`rounded-lg p-4 ${isYearPositive ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
-            <div className="text-xs text-zinc-400 uppercase tracking-wide mb-2">1 Year</div>
-            <div className="flex items-center gap-2">
-              {isYearPositive ? (
-                <TrendingUp className="w-5 h-5 text-emerald-400" />
-              ) : (
-                <TrendingDown className="w-5 h-5 text-red-400" />
-              )}
-              <span className={`text-xl font-bold ${isYearPositive ? 'text-emerald-400' : 'text-red-400'}`}>
-                {isYearPositive ? '+' : ''}{yearChange.toFixed(2)}%
-              </span>
-            </div>
-            <div className={`text-sm mt-1 ${isYearPositive ? 'text-emerald-400/70' : 'text-red-400/70'}`}>
-              {isYearPositive ? '+' : ''}{formatCurrency(data.price - yearStartPrice, data.currency)}
-            </div>
-            <div className="text-xs text-zinc-500 mt-2">
-              Year Start: {formatCurrency(yearStartPrice, data.currency)}
-            </div>
+          <div className="text-right">
+            <div className="text-zinc-500 text-xs">Prev Close</div>
+            <div className="text-zinc-300">{formatCurrency(data.previousClose, data.currency)}</div>
           </div>
         </div>
 
-        {/* 1 Year Chart */}
-        <div className="bg-zinc-900/50 rounded-lg p-4">
-          <div className="text-xs text-zinc-400 uppercase tracking-wide mb-3">Price History (1Y)</div>
-          {data.history.prices.length >= 2 ? (
-            <MiniChart data={data.history.prices} isPositive={isYearPositive} />
+        {/* Time Range Selector */}
+        <div className="flex items-center gap-1 bg-zinc-900/50 rounded-lg p-1">
+          {TIME_RANGES.map((range) => (
+            <button
+              key={range.value}
+              onClick={() => handleRangeChange(range.value)}
+              disabled={chartLoading}
+              className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                selectedRange === range.value
+                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+              }`}
+            >
+              {range.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Chart */}
+        <div className="bg-zinc-900/30 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-xs text-zinc-400 uppercase tracking-wide">
+              Price History ({data.history.rangeLabel})
+            </div>
+            <div className={`text-sm font-medium ${isRangePositive ? 'text-emerald-400' : 'text-red-400'}`}>
+              {isRangePositive ? '+' : ''}{rangeChange.toFixed(2)}%
+            </div>
+          </div>
+          {chartLoading ? (
+            <div className="h-[200px] flex items-center justify-center">
+              <RefreshCw className="w-6 h-6 text-zinc-500 animate-spin" />
+            </div>
+          ) : data.history.prices.length >= 2 ? (
+            <StockChart
+              data={data.history.prices}
+              timestamps={data.history.timestamps}
+              isPositive={isRangePositive}
+              range={data.history.range}
+              currency={data.currency}
+            />
           ) : (
-            <div className="h-[120px] flex items-center justify-center text-zinc-500 text-sm">
+            <div className="h-[200px] flex items-center justify-center text-zinc-500 text-sm">
               Insufficient historical data available
             </div>
           )}
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-3 text-sm">
+        {/* Key Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
           <div className="bg-zinc-900/30 rounded-lg p-3">
-            <div className="text-zinc-500 text-xs">Day Range</div>
-            <div className="text-zinc-200 font-medium mt-1">
-              {formatCurrency(data.dayLow, data.currency)} - {formatCurrency(data.dayHigh, data.currency)}
-            </div>
-          </div>
-          <div className="bg-zinc-900/30 rounded-lg p-3">
-            <div className="text-zinc-500 text-xs">52 Week Range</div>
-            <div className="text-zinc-200 font-medium mt-1">
-              {formatCurrency(data.fiftyTwoWeekLow, data.currency)} - {formatCurrency(data.fiftyTwoWeekHigh, data.currency)}
-            </div>
+            <div className="text-zinc-500 text-xs">Open</div>
+            <div className="text-zinc-200 font-medium mt-1">{formatCurrency(data.dayOpen, data.currency)}</div>
           </div>
           <div className="bg-zinc-900/30 rounded-lg p-3">
             <div className="text-zinc-500 text-xs">Volume</div>
@@ -507,6 +580,52 @@ export function StockCard({ ticker: initialTicker, companyName, companyInfo }: S
           <div className="bg-zinc-900/30 rounded-lg p-3">
             <div className="text-zinc-500 text-xs">Avg Volume</div>
             <div className="text-zinc-200 font-medium mt-1">{formatNumber(data.avgVolume)}</div>
+          </div>
+          <div className="bg-zinc-900/30 rounded-lg p-3">
+            <div className="text-zinc-500 text-xs">Day High</div>
+            <div className="text-zinc-200 font-medium mt-1">{formatCurrency(data.dayHigh, data.currency)}</div>
+          </div>
+        </div>
+
+        {/* Price Ranges */}
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="bg-zinc-900/30 rounded-lg p-3">
+            <div className="text-zinc-500 text-xs">Day Range</div>
+            <div className="text-zinc-200 font-medium mt-1">
+              {formatCurrency(data.dayLow, data.currency)} - {formatCurrency(data.dayHigh, data.currency)}
+            </div>
+            <div className="mt-2 h-1.5 bg-zinc-800 rounded-full overflow-hidden relative">
+              <div
+                className="h-full bg-gradient-to-r from-red-500 via-zinc-400 to-emerald-500"
+                style={{ width: '100%' }}
+              />
+              <div
+                className="absolute top-0 w-1 h-1.5 bg-white rounded-full"
+                style={{
+                  left: `${Math.max(0, Math.min(100, ((data.price - data.dayLow) / (data.dayHigh - data.dayLow || 1)) * 100))}%`,
+                  transform: 'translateX(-50%)'
+                }}
+              />
+            </div>
+          </div>
+          <div className="bg-zinc-900/30 rounded-lg p-3">
+            <div className="text-zinc-500 text-xs">52 Week Range</div>
+            <div className="text-zinc-200 font-medium mt-1">
+              {formatCurrency(data.fiftyTwoWeekLow, data.currency)} - {formatCurrency(data.fiftyTwoWeekHigh, data.currency)}
+            </div>
+            <div className="mt-2 h-1.5 bg-zinc-800 rounded-full overflow-hidden relative">
+              <div
+                className="h-full bg-gradient-to-r from-red-500 via-zinc-400 to-emerald-500"
+                style={{ width: '100%' }}
+              />
+              <div
+                className="absolute top-0 w-1 h-1.5 bg-white rounded-full"
+                style={{
+                  left: `${Math.max(0, Math.min(100, ((data.price - data.fiftyTwoWeekLow) / (data.fiftyTwoWeekHigh - data.fiftyTwoWeekLow || 1)) * 100))}%`,
+                  transform: 'translateX(-50%)'
+                }}
+              />
+            </div>
           </div>
         </div>
       </div>

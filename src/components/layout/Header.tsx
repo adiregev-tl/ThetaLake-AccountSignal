@@ -10,7 +10,7 @@ export interface CompanyInfo {
   name: string;
   symbol?: string;
   isPublic: boolean;
-  publicStatus?: 'public' | 'private' | 'went_private' | 'pre_ipo';
+  publicStatus?: 'public' | 'private' | 'went_private' | 'pre_ipo' | 'unknown';
 }
 
 interface CompanySuggestion {
@@ -18,7 +18,8 @@ interface CompanySuggestion {
   symbol?: string;
   description?: string;
   isPublic: boolean;
-  publicStatus?: 'public' | 'private' | 'went_private' | 'pre_ipo';
+  publicStatus?: 'public' | 'private' | 'went_private' | 'pre_ipo' | 'unknown';
+  isCustomSearch?: boolean;
 }
 
 interface HeaderProps {
@@ -60,8 +61,10 @@ export function Header({
         const response = await fetch(`/api/company/search?q=${encodeURIComponent(searchInput.trim())}`);
         if (response.ok) {
           const data = await response.json();
-          setSuggestions(data.results || []);
-          setShowSuggestions(data.results?.length > 0);
+          const results = data.results || [];
+          setSuggestions(results);
+          // Always show dropdown if we have results (including custom search option)
+          setShowSuggestions(results.length > 0);
           setSelectedIndex(-1);
         }
       } catch (err) {
@@ -107,10 +110,12 @@ export function Header({
       return;
     }
 
-    // Check if there's a high-confidence match to auto-correct typos
-    if (suggestions.length > 0) {
-      // Use the top suggestion if input is close enough (fuzzy match worked)
-      const topSuggestion = suggestions[0];
+    // Check for known company matches (not custom search options)
+    const knownMatches = suggestions.filter(s => !s.isCustomSearch);
+
+    if (knownMatches.length > 0) {
+      // Use the top known suggestion if input is close enough
+      const topSuggestion = knownMatches[0];
       const inputLower = searchInput.trim().toLowerCase();
       const suggestionLower = topSuggestion.name.toLowerCase();
 
@@ -136,8 +141,18 @@ export function Header({
       return;
     }
 
-    // No suggestions available, search as-is (assume unknown = potentially public)
-    onSearch(searchInput.trim());
+    // No known matches - search with the user's input as-is
+    // Capitalize for display
+    const capitalizedInput = searchInput.trim()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+
+    onSearch(capitalizedInput, {
+      name: capitalizedInput,
+      isPublic: true, // Assume public, will be determined during analysis
+      publicStatus: 'unknown'
+    });
   };
 
   const handleSelectSuggestion = (suggestion: CompanySuggestion) => {
@@ -205,29 +220,39 @@ export function Header({
                 {/* Company Suggestions Dropdown */}
                 {showSuggestions && suggestions.length > 0 && (
                   <div className="absolute top-full left-0 right-0 mt-1 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl z-50 overflow-hidden">
-                    <div className="text-xs text-zinc-500 px-3 py-2 border-b border-zinc-800">
-                      Did you mean?
-                    </div>
+                    {/* Show "Suggestions" header only if there are known matches */}
+                    {suggestions.some(s => !s.isCustomSearch) && (
+                      <div className="text-xs text-zinc-500 px-3 py-2 border-b border-zinc-800">
+                        Suggestions
+                      </div>
+                    )}
                     {suggestions.map((suggestion, index) => (
                       <button
-                        key={suggestion.name}
+                        key={`${suggestion.name}-${suggestion.isCustomSearch ? 'custom' : 'known'}`}
                         type="button"
                         onClick={() => handleSelectSuggestion(suggestion)}
                         className={`w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors ${
+                          suggestion.isCustomSearch ? 'border-t border-zinc-800' : ''
+                        } ${
                           index === selectedIndex
                             ? 'bg-emerald-500/20 text-white'
                             : 'hover:bg-zinc-800 text-zinc-300'
                         }`}
                       >
-                        <div>
-                          <span className="font-medium">{suggestion.name}</span>
-                          {suggestion.symbol && (
-                            <span className="ml-2 text-emerald-400 text-sm">{suggestion.symbol}</span>
+                        <div className="flex items-center gap-2">
+                          {suggestion.isCustomSearch && (
+                            <Search className="w-4 h-4 text-cyan-400" />
+                          )}
+                          <span className={`font-medium ${suggestion.isCustomSearch ? 'text-cyan-400' : ''}`}>
+                            {suggestion.name}
+                          </span>
+                          {suggestion.symbol && !suggestion.isCustomSearch && (
+                            <span className="text-emerald-400 text-sm">{suggestion.symbol}</span>
                           )}
                         </div>
-                        {suggestion.description && (
-                          <span className="text-xs text-zinc-500">{suggestion.description}</span>
-                        )}
+                        <span className={`text-xs ${suggestion.isCustomSearch ? 'text-cyan-400/70' : 'text-zinc-500'}`}>
+                          {suggestion.description}
+                        </span>
                       </button>
                     ))}
                   </div>
