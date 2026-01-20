@@ -4,11 +4,57 @@ import { AnalyzeRequest, AnalyzeResponse, ApiError } from '@/types/api';
 import { ProviderName, PROVIDER_INFO } from '@/types/analysis';
 import { searchCompanyNews, searchCompanyCaseStudies, searchCompanyInfo, searchInvestorDocuments } from '@/lib/services/webSearch';
 import { tavilySearchCompanyNews, tavilySearchCaseStudies, tavilySearchCompanyInfo, tavilySearchInvestorDocs } from '@/lib/services/tavilySearch';
+import { createClient } from '@/lib/supabase/server';
+
+// Type for server settings
+interface ServerSettings {
+  default_provider: string;
+  openai_api_key: string | null;
+  anthropic_api_key: string | null;
+  gemini_api_key: string | null;
+  perplexity_api_key: string | null;
+  openai_model: string;
+  anthropic_model: string;
+  gemini_model: string;
+  perplexity_model: string;
+  web_search_provider: string;
+  tavily_api_key: string | null;
+  websearchapi_key: string | null;
+}
+
+// Get API key for a provider from settings
+function getProviderApiKey(settings: ServerSettings, provider: ProviderName): string | null {
+  switch (provider) {
+    case 'openai': return settings.openai_api_key;
+    case 'anthropic': return settings.anthropic_api_key;
+    case 'gemini': return settings.gemini_api_key;
+    case 'perplexity': return settings.perplexity_api_key;
+    default: return null;
+  }
+}
+
+// Get model for a provider from settings
+function getProviderModel(settings: ServerSettings, provider: ProviderName): string {
+  switch (provider) {
+    case 'openai': return settings.openai_model || 'gpt-4o';
+    case 'anthropic': return settings.anthropic_model || 'claude-sonnet-4-20250514';
+    case 'gemini': return settings.gemini_model || 'gemini-2.0-flash';
+    case 'perplexity': return settings.perplexity_model || 'sonar-pro';
+    default: return 'gpt-4o';
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
     const body: AnalyzeRequest = await request.json();
-    const { companyName, provider, model, apiKey, webSearchApiKey, tavilyApiKey } = body;
+    const {
+      companyName,
+      provider: clientProvider,
+      model: clientModel,
+      apiKey: clientApiKey,
+      webSearchApiKey: clientWebSearchApiKey,
+      tavilyApiKey: clientTavilyApiKey
+    } = body;
 
     // Validate input
     if (!companyName?.trim()) {
@@ -18,27 +64,51 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!provider || !['openai', 'anthropic', 'gemini', 'perplexity'].includes(provider)) {
+    // Fetch server settings from Supabase
+    const supabase = await createClient();
+    const { data: settings } = await supabase
+      .from('app_settings')
+      .select('*')
+      .single();
+
+    // Type assertion for settings
+    const serverSettings = settings as ServerSettings | null;
+
+    // Determine provider - use server default if not specified by client
+    const provider = clientProvider || serverSettings?.default_provider || 'openai';
+
+    if (!['openai', 'anthropic', 'gemini', 'perplexity'].includes(provider)) {
       return NextResponse.json<ApiError>(
         { error: 'Valid provider is required (openai, anthropic, gemini, or perplexity)' },
         { status: 400 }
       );
     }
 
+    // Get API key - prefer server settings, fall back to client-provided (for local dev)
+    const apiKey = (serverSettings ? getProviderApiKey(serverSettings, provider as ProviderName) : null) || clientApiKey;
+
     if (!apiKey?.trim()) {
       return NextResponse.json<ApiError>(
-        { error: 'API key is required' },
+        { error: 'API key not configured. Please contact an administrator.' },
         { status: 401 }
       );
     }
 
+    // Get model - prefer client-specified, then server settings, then default
+    const model = clientModel || (serverSettings ? getProviderModel(serverSettings, provider as ProviderName) : undefined);
+
+    // Get web search keys - prefer server settings
+    const webSearchProvider = serverSettings?.web_search_provider || 'none';
+    const tavilyApiKey = serverSettings?.tavily_api_key || clientTavilyApiKey;
+    const webSearchApiKey = serverSettings?.websearchapi_key || clientWebSearchApiKey;
+
     const providerInfo = PROVIDER_INFO[provider as ProviderName];
-    const useTavily = !providerInfo.supportsWebGrounding && !!tavilyApiKey;
-    const useWebSearchApi = !providerInfo.supportsWebGrounding && !tavilyApiKey && !!webSearchApiKey;
+    const useTavily = !providerInfo.supportsWebGrounding && webSearchProvider === 'tavily' && !!tavilyApiKey;
+    const useWebSearchApi = !providerInfo.supportsWebGrounding && webSearchProvider === 'websearchapi' && !!webSearchApiKey;
     const shouldUseWebSearch = useTavily || useWebSearchApi;
     let webSearchData = null;
     let webSearchError: string | null = null;
-    const webSearchProvider = useTavily ? 'Tavily' : 'WebSearchAPI';
+    const webSearchProviderName = useTavily ? 'Tavily' : 'WebSearchAPI';
 
     // If provider doesn't have native web grounding and we have a web search API key,
     // fetch real-time web data to augment the analysis
@@ -78,17 +148,17 @@ export async function POST(request: NextRequest) {
       } catch (err) {
         // Log but don't fail - web search is an enhancement
         const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        console.warn(`${webSearchProvider} error (non-fatal):`, errorMessage);
+        console.warn(`${webSearchProviderName} error (non-fatal):`, errorMessage);
 
         // Parse the error to give a user-friendly message
         if (errorMessage.includes('Forbidden') || errorMessage.includes('401') || errorMessage.includes('403') || errorMessage.includes('Invalid API Key')) {
-          webSearchError = `${webSearchProvider} key is invalid or expired`;
+          webSearchError = `${webSearchProviderName} key is invalid or expired`;
         } else if (errorMessage.includes('429') || errorMessage.includes('rate limit')) {
-          webSearchError = `${webSearchProvider} rate limit exceeded`;
+          webSearchError = `${webSearchProviderName} rate limit exceeded`;
         } else if (errorMessage.includes('timeout') || errorMessage.includes('ETIMEDOUT')) {
-          webSearchError = `${webSearchProvider} request timed out`;
+          webSearchError = `${webSearchProviderName} request timed out`;
         } else {
-          webSearchError = `${webSearchProvider} failed: ` + errorMessage.substring(0, 100);
+          webSearchError = `${webSearchProviderName} failed: ` + errorMessage.substring(0, 100);
         }
       }
     }
@@ -141,7 +211,7 @@ export async function POST(request: NextRequest) {
 
     // Log web search status for debugging
     if (shouldUseWebSearch) {
-      console.log(`${webSearchProvider} status:`, webSearchData ? 'SUCCESS' : `FAILED: ${webSearchError}`);
+      console.log(`${webSearchProviderName} status:`, webSearchData ? 'SUCCESS' : `FAILED: ${webSearchError}`);
     }
 
     return NextResponse.json<AnalyzeResponse>({

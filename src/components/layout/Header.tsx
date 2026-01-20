@@ -5,6 +5,9 @@ import { TrendingUp, Search, Loader2, Settings } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ProviderName, PROVIDER_INFO } from '@/types/analysis';
+import { useAuth } from '@/lib/contexts/AuthContext';
+import { LoginButton } from '@/components/auth/LoginButton';
+import { UserMenu } from '@/components/auth/UserMenu';
 
 export interface CompanyInfo {
   name: string;
@@ -37,6 +40,7 @@ export function Header({
   selectedModel,
   onSettingsClick
 }: HeaderProps) {
+  const { isAuthenticated, isAdmin, isLoading: authLoading } = useAuth();
   const [searchInput, setSearchInput] = useState('');
   const [suggestions, setSuggestions] = useState<CompanySuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -259,22 +263,36 @@ export function Header({
                 )}
               </div>
 
-              {/* Provider/Model Display - Click to open settings */}
-              <Button
-                variant="outline"
-                onClick={onSettingsClick}
-                className="bg-zinc-900 border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white justify-between gap-2"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{currentProviderInfo.name}</span>
+              {/* Provider/Model Display - Click to open settings (admin only) */}
+              {isAdmin && (
+                <Button
+                  variant="outline"
+                  onClick={onSettingsClick}
+                  className="bg-zinc-900 border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white justify-between gap-2"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{currentProviderInfo.name}</span>
+                    <span className="text-zinc-500">•</span>
+                    <span className="text-zinc-400">{currentModelInfo?.name || selectedModel}</span>
+                  </div>
+                  {currentProviderInfo.supportsWebGrounding && (
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" title="Web search" />
+                  )}
+                  <Settings className="w-4 h-4 text-zinc-500 flex-shrink-0" />
+                </Button>
+              )}
+
+              {/* Provider/Model Display (non-admin - read only) */}
+              {!isAdmin && isAuthenticated && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-md text-sm">
+                  <span className="font-medium text-zinc-300">{currentProviderInfo.name}</span>
                   <span className="text-zinc-500">•</span>
                   <span className="text-zinc-400">{currentModelInfo?.name || selectedModel}</span>
+                  {currentProviderInfo.supportsWebGrounding && (
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" title="Web search" />
+                  )}
                 </div>
-                {currentProviderInfo.supportsWebGrounding && (
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" title="Web search" />
-                )}
-                <Settings className="w-4 h-4 text-zinc-500 flex-shrink-0" />
-              </Button>
+              )}
 
               <Button
                 type="submit"
@@ -286,6 +304,16 @@ export function Header({
             </div>
           </form>
 
+          {/* Auth Section */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {!authLoading && (
+              isAuthenticated ? (
+                <UserMenu onSettingsClick={isAdmin ? onSettingsClick : undefined} />
+              ) : (
+                <LoginButton />
+              )
+            )}
+          </div>
         </div>
       </div>
     </header>

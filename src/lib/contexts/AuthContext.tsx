@@ -85,17 +85,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return () => subscription.unsubscribe();
   }, [supabase, fetchProfile]);
 
-  const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
+  const signInWithEmail = async (email: string) => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
 
-    if (error) {
-      console.error('Error signing in with Google:', error);
-      throw error;
+      if (error) {
+        console.error('Error signing in with email:', error);
+        throw error;
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -121,7 +126,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isLoading,
     isAdmin: profile?.role === 'admin',
     isAuthenticated: !!user,
-    signInWithGoogle,
+    signInWithEmail,
     signOut,
     refreshProfile,
   };

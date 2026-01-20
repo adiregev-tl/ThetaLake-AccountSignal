@@ -6,6 +6,8 @@ import { Header, CompanyInfo } from '@/components/layout/Header';
 import { AnalysisDashboard } from '@/components/analysis/AnalysisDashboard';
 import { DashboardSkeleton } from '@/components/analysis/DashboardSkeleton';
 import { ApiKeyModal } from '@/components/auth/ApiKeyModal';
+import { GuestBanner } from '@/components/auth/GuestBanner';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import { useApiKeys } from '@/lib/hooks/useApiKeys';
 import { useSearchHistory } from '@/lib/hooks/useSearchHistory';
 import { useBookmarks } from '@/lib/hooks/useBookmarks';
@@ -124,6 +126,7 @@ function getTicker(companyName: string): string | undefined {
 }
 
 export default function Home() {
+  const { isAuthenticated, isAdmin, isLoading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [companyName, setCompanyName] = useState<string | null>(null);
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
@@ -158,6 +161,12 @@ export default function Home() {
 
   const handleSearch = useCallback(
     async (company: string, info?: CompanyInfo) => {
+      // Check authentication first
+      if (!isAuthenticated) {
+        toast.error('Please sign in to analyze companies');
+        return;
+      }
+
       const apiKey = getKey(selectedProvider);
 
       if (!apiKey) {
@@ -223,7 +232,7 @@ export default function Home() {
         setLoading(false);
       }
     },
-    [selectedProvider, selectedModel, getKey, addToHistory, webSearchApiKey, tavilyApiKey, webSearchProvider]
+    [isAuthenticated, selectedProvider, selectedModel, getKey, addToHistory, webSearchApiKey, tavilyApiKey, webSearchProvider]
   );
 
   const handleLoadFromHistory = useCallback((item: typeof history[0]) => {
@@ -262,7 +271,10 @@ export default function Home() {
   }, [companyName, analysisData, selectedProvider, isBookmarked, getBookmark, removeBookmark, addBookmark]);
 
   const handleSettingsClick = () => {
-    setShowApiKeyModal(true);
+    // Only allow admins to open settings
+    if (isAdmin) {
+      setShowApiKeyModal(true);
+    }
   };
 
   const handleRefresh = useCallback(() => {
@@ -277,7 +289,7 @@ export default function Home() {
     toast.success(`${PROVIDER_INFO[selectedProvider].name} API key saved`);
   };
 
-  const loaded = keysLoaded && historyLoaded && bookmarksLoaded;
+  const loaded = keysLoaded && historyLoaded && bookmarksLoaded && !authLoading;
 
   if (!loaded) {
     return (
@@ -312,6 +324,9 @@ export default function Home() {
       />
 
       <main className="max-w-7xl mx-auto px-4 py-6">
+        {/* Guest Banner */}
+        <GuestBanner />
+
         {error && (
           <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400">
             {error}
@@ -346,7 +361,21 @@ export default function Home() {
                   technology trends, competitive analysis, and M&A activity.
                 </p>
 
-                {!hasKey(selectedProvider) && (
+                {/* Status based on auth state */}
+                {!isAuthenticated && (
+                  <p className="text-amber-400 text-sm">
+                    Sign in above to start analyzing companies
+                  </p>
+                )}
+
+                {isAuthenticated && !isAdmin && (
+                  <p className="text-emerald-400 text-sm flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                    Ready to analyze using {PROVIDER_INFO[selectedProvider].name}
+                  </p>
+                )}
+
+                {isAdmin && !hasKey(selectedProvider) && (
                   <button
                     onClick={() => setShowApiKeyModal(true)}
                     className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors btn-scale"
@@ -356,7 +385,7 @@ export default function Home() {
                   </button>
                 )}
 
-                {hasKey(selectedProvider) && (
+                {isAdmin && hasKey(selectedProvider) && (
                   <p className="text-emerald-400 text-sm flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-400" />
                     {PROVIDER_INFO[selectedProvider].name} API key configured
@@ -599,22 +628,25 @@ export default function Home() {
         </div>
       </footer>
 
-      <ApiKeyModal
-        open={showApiKeyModal}
-        onOpenChange={setShowApiKeyModal}
-        selectedProvider={selectedProvider}
-        selectedModel={selectedModel}
-        onProviderChange={setSelectedProvider}
-        onModelChange={(model) => setSelectedModel(selectedProvider, model)}
-        onSaveApiKey={handleSaveApiKey}
-        currentKey={getKey(selectedProvider) || undefined}
-        webSearchProvider={webSearchProvider}
-        onWebSearchProviderChange={setWebSearchProvider}
-        tavilyApiKey={tavilyApiKey || undefined}
-        onSaveTavilyKey={setTavilyApiKey}
-        webSearchApiKey={webSearchApiKey || undefined}
-        onSaveWebSearchKey={setWebSearchApiKey}
-      />
+      {/* Settings Modal - Admin only */}
+      {isAdmin && (
+        <ApiKeyModal
+          open={showApiKeyModal}
+          onOpenChange={setShowApiKeyModal}
+          selectedProvider={selectedProvider}
+          selectedModel={selectedModel}
+          onProviderChange={setSelectedProvider}
+          onModelChange={(model) => setSelectedModel(selectedProvider, model)}
+          onSaveApiKey={handleSaveApiKey}
+          currentKey={getKey(selectedProvider) || undefined}
+          webSearchProvider={webSearchProvider}
+          onWebSearchProviderChange={setWebSearchProvider}
+          tavilyApiKey={tavilyApiKey || undefined}
+          onSaveTavilyKey={setTavilyApiKey}
+          webSearchApiKey={webSearchApiKey || undefined}
+          onSaveWebSearchKey={setWebSearchApiKey}
+        />
+      )}
     </div>
   );
 }
