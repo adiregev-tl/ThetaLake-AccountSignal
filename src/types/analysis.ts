@@ -8,6 +8,8 @@ export interface AnalysisResult {
   techNews: LinkItem[];
   caseStudies: LinkItem[];
   competitors: CompetitorItem[];
+  competitorMentions: CompetitorMentionItem[];
+  leadershipChanges: LeadershipChangeItem[];
   maActivity: MAItem[];
   sources: string[];
 }
@@ -40,6 +42,25 @@ export interface MAItem {
   target: string;
   dealValue?: string;
   rationale?: string;
+}
+
+export interface CompetitorMentionItem {
+  competitorName: string;
+  mentionType: 'customer' | 'partner' | 'comparison' | 'case_study' | 'press_release' | 'other';
+  title: string;
+  url: string;
+  date?: string;
+  summary: string;
+}
+
+export interface LeadershipChangeItem {
+  name: string;
+  role: string;
+  changeType: 'appointed' | 'promoted' | 'departed' | 'expanded_role';
+  date?: string;
+  previousRole?: string;
+  source?: string;
+  url?: string;
 }
 
 export type ProviderName = 'openai' | 'anthropic' | 'gemini' | 'perplexity';

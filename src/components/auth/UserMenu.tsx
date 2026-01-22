@@ -73,7 +73,7 @@ export function UserMenu({ onSettingsClick }: UserMenuProps) {
               className="text-zinc-300 focus:text-white focus:bg-zinc-800 cursor-pointer"
             >
               <Settings className="w-4 h-4 mr-2" />
-              AI Settings
+              Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-zinc-800" />
           </>

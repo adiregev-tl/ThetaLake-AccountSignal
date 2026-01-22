@@ -497,37 +497,37 @@ export function StockCard({ ticker: initialTicker, companyName, companyInfo }: S
         </div>
 
         {/* Current Price & Change */}
-        <div className="flex items-end justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
           <div>
-            <div className="text-4xl font-bold text-white">
+            <div className="text-3xl sm:text-4xl font-bold text-white">
               {formatCurrency(data.price, data.currency)}
             </div>
-            <div className={`flex items-center gap-2 mt-1 ${isTodayPositive ? 'text-emerald-400' : 'text-red-400'}`}>
+            <div className={`flex flex-wrap items-center gap-1 sm:gap-2 mt-1 ${isTodayPositive ? 'text-emerald-400' : 'text-red-400'}`}>
               {isTodayPositive ? (
                 <TrendingUp className="w-4 h-4" />
               ) : (
                 <TrendingDown className="w-4 h-4" />
               )}
-              <span className="font-semibold">
+              <span className="font-semibold text-sm sm:text-base">
                 {isTodayPositive ? '+' : ''}{formatCurrency(data.change, data.currency)} ({isTodayPositive ? '+' : ''}{data.changePercent.toFixed(2)}%)
               </span>
-              <span className="text-zinc-500 text-sm">Today</span>
+              <span className="text-zinc-500 text-xs sm:text-sm">Today</span>
             </div>
           </div>
-          <div className="text-right">
+          <div className="text-left sm:text-right">
             <div className="text-zinc-500 text-xs">Prev Close</div>
-            <div className="text-zinc-300">{formatCurrency(data.previousClose, data.currency)}</div>
+            <div className="text-zinc-300 text-sm sm:text-base">{formatCurrency(data.previousClose, data.currency)}</div>
           </div>
         </div>
 
         {/* Time Range Selector */}
-        <div className="flex items-center gap-1 bg-zinc-900/50 rounded-lg p-1">
+        <div className="flex items-center gap-0.5 sm:gap-1 bg-zinc-900/50 rounded-lg p-1 overflow-x-auto">
           {TIME_RANGES.map((range) => (
             <button
               key={range.value}
               onClick={() => handleRangeChange(range.value)}
               disabled={chartLoading}
-              className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              className={`flex-1 min-w-[36px] px-2 sm:px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 selectedRange === range.value
                   ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
@@ -568,30 +568,30 @@ export function StockCard({ ticker: initialTicker, companyName, companyInfo }: S
         </div>
 
         {/* Key Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-          <div className="bg-zinc-900/30 rounded-lg p-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 text-sm">
+          <div className="bg-zinc-900/30 rounded-lg p-2 sm:p-3">
             <div className="text-zinc-500 text-xs">Open</div>
-            <div className="text-zinc-200 font-medium mt-1">{formatCurrency(data.dayOpen, data.currency)}</div>
+            <div className="text-zinc-200 font-medium mt-1 text-xs sm:text-sm">{formatCurrency(data.dayOpen, data.currency)}</div>
           </div>
-          <div className="bg-zinc-900/30 rounded-lg p-3">
+          <div className="bg-zinc-900/30 rounded-lg p-2 sm:p-3">
             <div className="text-zinc-500 text-xs">Volume</div>
-            <div className="text-zinc-200 font-medium mt-1">{formatNumber(data.volume)}</div>
+            <div className="text-zinc-200 font-medium mt-1 text-xs sm:text-sm">{formatNumber(data.volume)}</div>
           </div>
-          <div className="bg-zinc-900/30 rounded-lg p-3">
-            <div className="text-zinc-500 text-xs">Avg Volume</div>
-            <div className="text-zinc-200 font-medium mt-1">{formatNumber(data.avgVolume)}</div>
+          <div className="bg-zinc-900/30 rounded-lg p-2 sm:p-3">
+            <div className="text-zinc-500 text-xs">Avg Vol</div>
+            <div className="text-zinc-200 font-medium mt-1 text-xs sm:text-sm">{formatNumber(data.avgVolume)}</div>
           </div>
-          <div className="bg-zinc-900/30 rounded-lg p-3">
+          <div className="bg-zinc-900/30 rounded-lg p-2 sm:p-3">
             <div className="text-zinc-500 text-xs">Day High</div>
-            <div className="text-zinc-200 font-medium mt-1">{formatCurrency(data.dayHigh, data.currency)}</div>
+            <div className="text-zinc-200 font-medium mt-1 text-xs sm:text-sm">{formatCurrency(data.dayHigh, data.currency)}</div>
           </div>
         </div>
 
         {/* Price Ranges */}
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div className="bg-zinc-900/30 rounded-lg p-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-sm">
+          <div className="bg-zinc-900/30 rounded-lg p-2 sm:p-3">
             <div className="text-zinc-500 text-xs">Day Range</div>
-            <div className="text-zinc-200 font-medium mt-1">
+            <div className="text-zinc-200 font-medium mt-1 text-xs sm:text-sm">
               {formatCurrency(data.dayLow, data.currency)} - {formatCurrency(data.dayHigh, data.currency)}
             </div>
             <div className="mt-2 h-1.5 bg-zinc-800 rounded-full overflow-hidden relative">
@@ -608,9 +608,9 @@ export function StockCard({ ticker: initialTicker, companyName, companyInfo }: S
               />
             </div>
           </div>
-          <div className="bg-zinc-900/30 rounded-lg p-3">
+          <div className="bg-zinc-900/30 rounded-lg p-2 sm:p-3">
             <div className="text-zinc-500 text-xs">52 Week Range</div>
-            <div className="text-zinc-200 font-medium mt-1">
+            <div className="text-zinc-200 font-medium mt-1 text-xs sm:text-sm">
               {formatCurrency(data.fiftyTwoWeekLow, data.currency)} - {formatCurrency(data.fiftyTwoWeekHigh, data.currency)}
             </div>
             <div className="mt-2 h-1.5 bg-zinc-800 rounded-full overflow-hidden relative">

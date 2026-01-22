@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ExternalLink, Eye, EyeOff, Check, Settings, Key, Search, Cpu, Loader2, X, CheckCircle2, XCircle } from 'lucide-react';
+import { ExternalLink, Eye, EyeOff, Check, Settings, Key, Search, Cpu, Loader2, X, CheckCircle2, XCircle, Users, Trash2, Shield, User } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -14,61 +14,79 @@ import { Button } from '@/components/ui/button';
 import { ProviderName, PROVIDER_INFO } from '@/types/analysis';
 import { WebSearchProvider } from '@/lib/hooks/useApiKeys';
 
+interface SaveSettings {
+  provider: ProviderName;
+  model: string;
+  apiKey?: string;
+  webSearchProvider: WebSearchProvider;
+  tavilyKey?: string | null;
+  webSearchKey?: string | null;
+}
+
+interface UserProfile {
+  id: string;
+  email: string;
+  display_name: string | null;
+  role: 'admin' | 'user';
+  created_at: string;
+}
+
 interface ApiKeyModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedProvider: ProviderName;
   selectedModel: string;
-  onProviderChange: (provider: ProviderName) => void;
-  onModelChange: (model: string) => void;
-  onSaveApiKey: (apiKey: string) => void;
   currentKey?: string;
-  // Web search settings
   webSearchProvider: WebSearchProvider;
-  onWebSearchProviderChange: (provider: WebSearchProvider) => void;
   tavilyApiKey?: string;
-  onSaveTavilyKey: (key: string | null) => void;
   webSearchApiKey?: string;
-  onSaveWebSearchKey: (key: string | null) => void;
+  onSaveAll: (settings: SaveSettings) => Promise<void>;
 }
 
 export function ApiKeyModal({
   open,
   onOpenChange,
-  selectedProvider,
-  selectedModel,
-  onProviderChange,
-  onModelChange,
-  onSaveApiKey,
+  selectedProvider: initialProvider,
+  selectedModel: initialModel,
   currentKey,
-  webSearchProvider,
-  onWebSearchProviderChange,
+  webSearchProvider: initialWebSearchProvider,
   tavilyApiKey,
-  onSaveTavilyKey,
   webSearchApiKey,
-  onSaveWebSearchKey
+  onSaveAll
 }: ApiKeyModalProps) {
+  const [selectedProvider, setSelectedProvider] = useState<ProviderName>(initialProvider);
+  const [selectedModel, setSelectedModel] = useState(initialModel);
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [tavilyKey, setTavilyKey] = useState('');
   const [showTavilyKey, setShowTavilyKey] = useState(false);
   const [webKey, setWebKey] = useState('');
   const [showWebKey, setShowWebKey] = useState(false);
-  const [activeTab, setActiveTab] = useState<'provider' | 'websearch'>('provider');
+  const [webSearchProvider, setWebSearchProvider] = useState<WebSearchProvider>(initialWebSearchProvider);
+  const [activeTab, setActiveTab] = useState<'provider' | 'websearch' | 'users'>('provider');
   const [testingKey, setTestingKey] = useState(false);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [usersError, setUsersError] = useState<string | null>(null);
+  const [usersWarning, setUsersWarning] = useState<string | null>(null);
   const [keyTestResult, setKeyTestResult] = useState<{ valid: boolean; error?: string } | null>(null);
   const [testingWebSearch, setTestingWebSearch] = useState(false);
   const [webSearchTestResult, setWebSearchTestResult] = useState<{ valid: boolean; error?: string } | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (open) {
+      setSelectedProvider(initialProvider);
+      setSelectedModel(initialModel);
       setApiKey(currentKey || '');
       setTavilyKey(tavilyApiKey || '');
       setWebKey(webSearchApiKey || '');
+      setWebSearchProvider(initialWebSearchProvider);
       setKeyTestResult(null);
       setWebSearchTestResult(null);
     }
-  }, [open, currentKey, tavilyApiKey, webSearchApiKey]);
+  }, [open, initialProvider, initialModel, currentKey, tavilyApiKey, webSearchApiKey, initialWebSearchProvider]);
 
   // Reset web search test result when keys change
   useEffect(() => {
@@ -79,6 +97,65 @@ export function ApiKeyModal({
   useEffect(() => {
     setKeyTestResult(null);
   }, [apiKey, selectedProvider]);
+
+  // Fetch users when switching to users tab
+  useEffect(() => {
+    if (activeTab === 'users' && users.length === 0) {
+      fetchUsers();
+    }
+  }, [activeTab]);
+
+  const fetchUsers = async () => {
+    setLoadingUsers(true);
+    setUsersError(null);
+    setUsersWarning(null);
+    try {
+      const response = await fetch('/api/admin/users');
+      const data = await response.json();
+
+      if (!response.ok) {
+        setUsersError(data.error || 'Failed to fetch users');
+        setUsers([]);
+        return;
+      }
+
+      setUsers(data.users || []);
+      if (data.warning) {
+        setUsersWarning(data.warning);
+      }
+    } catch (err) {
+      console.error('Failed to fetch users:', err);
+      setUsersError('Network error - failed to fetch users');
+      setUsers([]);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const deleteUser = async (userId: string) => {
+    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      return;
+    }
+
+    setDeletingUserId(userId);
+    try {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        setUsers(users.filter(u => u.id !== userId));
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Failed to delete user');
+      }
+    } catch (err) {
+      console.error('Failed to delete user:', err);
+      alert('Failed to delete user');
+    } finally {
+      setDeletingUserId(null);
+    }
+  };
 
   const provider = PROVIDER_INFO[selectedProvider];
   const providers: ProviderName[] = ['gemini', 'perplexity', 'openai', 'anthropic'];
@@ -134,15 +211,23 @@ export function ApiKeyModal({
     }
   };
 
-  const handleSave = () => {
-    // Save API key if provided
-    if (apiKey.trim()) {
-      onSaveApiKey(apiKey.trim());
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await onSaveAll({
+        provider: selectedProvider,
+        model: selectedModel,
+        apiKey: apiKey.trim() || undefined,
+        webSearchProvider,
+        tavilyKey: tavilyKey.trim() || null,
+        webSearchKey: webKey.trim() || null,
+      });
+      onOpenChange(false);
+    } catch {
+      // Error already handled in parent
+    } finally {
+      setSaving(false);
     }
-    // Save web search keys
-    onSaveTavilyKey(tavilyKey.trim() || null);
-    onSaveWebSearchKey(webKey.trim() || null);
-    onOpenChange(false);
   };
 
   const getWebSearchKeyForProvider = () => {
@@ -168,25 +253,38 @@ export function ApiKeyModal({
         <div className="flex gap-1 p-1 bg-zinc-800/50 rounded-lg">
           <button
             onClick={() => setActiveTab('provider')}
-            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`flex-1 flex items-center justify-center gap-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
               activeTab === 'provider'
                 ? 'bg-zinc-700 text-white'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
             <Cpu className="w-4 h-4" />
-            AI Provider
+            <span className="hidden sm:inline">AI Provider</span>
+            <span className="sm:hidden">AI</span>
           </button>
           <button
             onClick={() => setActiveTab('websearch')}
-            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`flex-1 flex items-center justify-center gap-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
               activeTab === 'websearch'
                 ? 'bg-zinc-700 text-white'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
             <Search className="w-4 h-4" />
-            Web Search
+            <span className="hidden sm:inline">Web Search</span>
+            <span className="sm:hidden">Search</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`flex-1 flex items-center justify-center gap-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
+              activeTab === 'users'
+                ? 'bg-zinc-700 text-white'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>Users</span>
           </button>
         </div>
 
@@ -202,7 +300,7 @@ export function ApiKeyModal({
                   return (
                     <button
                       key={p}
-                      onClick={() => onProviderChange(p)}
+                      onClick={() => setSelectedProvider(p)}
                       className={`flex items-center gap-2 p-3 rounded-lg border transition-all ${
                         selectedProvider === p
                           ? 'border-emerald-500 bg-emerald-500/10 text-white'
@@ -229,7 +327,7 @@ export function ApiKeyModal({
               <label className="text-sm font-medium text-zinc-300">Model</label>
               <select
                 value={selectedModel}
-                onChange={(e) => onModelChange(e.target.value)}
+                onChange={(e) => setSelectedModel(e.target.value)}
                 className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
               >
                 {provider.models.map((model) => (
@@ -347,7 +445,7 @@ export function ApiKeyModal({
               <div className="space-y-2">
                 {/* Tavily Option */}
                 <button
-                  onClick={() => onWebSearchProviderChange('tavily')}
+                  onClick={() => setWebSearchProvider('tavily')}
                   className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left ${
                     webSearchProvider === 'tavily'
                       ? 'border-purple-500 bg-purple-500/10'
@@ -370,7 +468,7 @@ export function ApiKeyModal({
 
                 {/* WebSearchAPI Option */}
                 <button
-                  onClick={() => onWebSearchProviderChange('websearchapi')}
+                  onClick={() => setWebSearchProvider('websearchapi')}
                   className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left ${
                     webSearchProvider === 'websearchapi'
                       ? 'border-cyan-500 bg-cyan-500/10'
@@ -392,7 +490,7 @@ export function ApiKeyModal({
 
                 {/* None Option */}
                 <button
-                  onClick={() => onWebSearchProviderChange('none')}
+                  onClick={() => setWebSearchProvider('none')}
                   className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left ${
                     webSearchProvider === 'none'
                       ? 'border-zinc-500 bg-zinc-500/10'
@@ -585,6 +683,115 @@ export function ApiKeyModal({
           </div>
         )}
 
+        {/* Users Tab */}
+        {activeTab === 'users' && (
+          <div className="space-y-4 py-2">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-zinc-400">
+                Manage registered users
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchUsers}
+                disabled={loadingUsers}
+                className="border-zinc-700 text-zinc-400 hover:text-white"
+              >
+                {loadingUsers ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  'Refresh'
+                )}
+              </Button>
+            </div>
+
+            {/* Error message */}
+            {usersError && (
+              <div className="flex items-center gap-2 text-sm bg-red-500/10 text-red-400 px-3 py-2 rounded-lg border border-red-500/20">
+                <XCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{usersError}</span>
+              </div>
+            )}
+
+            {/* Warning message */}
+            {usersWarning && (
+              <div className="flex items-start gap-2 text-xs bg-amber-500/10 text-amber-400 px-3 py-2 rounded-lg border border-amber-500/20">
+                <Shield className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span>{usersWarning}</span>
+              </div>
+            )}
+
+            {loadingUsers && users.length === 0 ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-zinc-500" />
+              </div>
+            ) : users.length === 0 ? (
+              <div className="text-center py-8 text-zinc-500">
+                <Users className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                <p>No users found</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {users.map((user) => (
+                  <div
+                    key={user.id}
+                    className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg border border-zinc-700"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        user.role === 'admin'
+                          ? 'bg-amber-500/20 text-amber-400'
+                          : 'bg-zinc-700 text-zinc-400'
+                      }`}>
+                        {user.role === 'admin' ? (
+                          <Shield className="w-4 h-4" />
+                        ) : (
+                          <User className="w-4 h-4" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-white truncate">
+                            {user.display_name || user.email.split('@')[0]}
+                          </span>
+                          {user.role === 'admin' && (
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 flex-shrink-0">
+                              Admin
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-zinc-500 truncate">{user.email}</div>
+                        <div className="text-xs text-zinc-600">
+                          Joined {new Date(user.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                    {user.role !== 'admin' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteUser(user.id)}
+                        disabled={deletingUserId === user.id}
+                        className="text-zinc-500 hover:text-red-400 hover:bg-red-500/10 flex-shrink-0 ml-2"
+                      >
+                        {deletingUserId === user.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="text-xs text-zinc-500 pt-2 border-t border-zinc-800">
+              Total: {users.length} user{users.length !== 1 ? 's' : ''} ({users.filter(u => u.role === 'admin').length} admin{users.filter(u => u.role === 'admin').length !== 1 ? 's' : ''})
+            </div>
+          </div>
+        )}
+
         <div className="flex gap-3 justify-end pt-2 border-t border-zinc-800">
           <Button
             variant="outline"
@@ -595,9 +802,17 @@ export function ApiKeyModal({
           </Button>
           <Button
             onClick={handleSave}
+            disabled={saving}
             className="bg-emerald-600 hover:bg-emerald-500 text-white btn-scale"
           >
-            Save Settings
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                Saving...
+              </>
+            ) : (
+              'Save Settings'
+            )}
           </Button>
         </div>
       </DialogContent>

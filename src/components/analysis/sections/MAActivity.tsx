@@ -8,44 +8,35 @@ interface MAActivityProps {
 
 export function MAActivity({ activity }: MAActivityProps) {
   return (
-    <SectionCard title="M&A Activity (5 Years)" icon={Briefcase} color="blue" className="xl:col-span-3">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-zinc-500 border-b border-zinc-800">
-              <th className="pb-2 pr-4 font-medium">Year</th>
-              <th className="pb-2 pr-4 font-medium">Type</th>
-              <th className="pb-2 pr-4 font-medium">Target/Partner</th>
-              <th className="pb-2 pr-4 font-medium">Deal Value</th>
-              <th className="pb-2 font-medium">Rationale</th>
-            </tr>
-          </thead>
-          <tbody>
-            {activity.map((deal, i) => (
-              <tr key={i} className="border-b border-zinc-800/50 text-zinc-300">
-                <td className="py-3 pr-4">{deal.year || '-'}</td>
-                <td className="py-3 pr-4">
-                  <span
-                    className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                      deal.type?.toLowerCase().includes('acquisition')
-                        ? 'bg-blue-500/20 text-blue-400'
-                        : deal.type?.toLowerCase().includes('merger')
-                        ? 'bg-purple-500/20 text-purple-400'
-                        : 'bg-amber-500/20 text-amber-400'
-                    }`}
-                  >
-                    {deal.type || '-'}
-                  </span>
-                </td>
-                <td className="py-3 pr-4">{deal.target || '-'}</td>
-                <td className="py-3 pr-4 text-zinc-400">{deal.dealValue || '-'}</td>
-                <td className="py-3 text-zinc-400">{deal.rationale || '-'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <SectionCard title="M&A Activity" icon={Briefcase} color="blue">
+      <div className="space-y-3">
+        {activity.slice(0, 5).map((deal, i) => (
+          <div key={i} className="p-3 bg-zinc-900/50 rounded-lg">
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <span
+                className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                  deal.type?.toLowerCase().includes('acquisition')
+                    ? 'bg-blue-500/20 text-blue-400'
+                    : deal.type?.toLowerCase().includes('merger')
+                    ? 'bg-purple-500/20 text-purple-400'
+                    : 'bg-amber-500/20 text-amber-400'
+                }`}
+              >
+                {deal.type || 'Deal'}
+              </span>
+              <span className="text-zinc-500 text-xs">{deal.year || ''}</span>
+            </div>
+            <div className="text-zinc-200 font-medium text-sm">{deal.target || '-'}</div>
+            {deal.dealValue && (
+              <div className="text-emerald-400 text-xs mt-1">{deal.dealValue}</div>
+            )}
+            {deal.rationale && (
+              <p className="text-zinc-500 text-xs mt-1 line-clamp-2">{deal.rationale}</p>
+            )}
+          </div>
+        ))}
         {activity.length === 0 && (
-          <p className="text-zinc-500 text-sm py-4 text-center">No M&A activity found</p>
+          <p className="text-zinc-500 text-sm">No M&A activity found</p>
         )}
       </div>
     </SectionCard>

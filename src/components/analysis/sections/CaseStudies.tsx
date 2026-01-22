@@ -18,8 +18,8 @@ function isValidHttpUrl(url: string): boolean {
 
 export function CaseStudies({ studies }: CaseStudiesProps) {
   return (
-    <SectionCard title="External Case Studies" icon={FileText} color="cyan">
-      <div className="h-80 overflow-y-auto pr-2 space-y-1">
+    <SectionCard title="External Case Studies" icon={FileText} color="cyan" className="xl:col-span-2">
+      <div className="h-64 sm:h-80 overflow-y-auto pr-2 space-y-1">
         {studies.slice(0, 5).map((study, i) => {
           const hasValidUrl = isValidHttpUrl(study.url);
           return (

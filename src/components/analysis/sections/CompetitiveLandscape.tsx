@@ -8,7 +8,7 @@ interface CompetitiveLandscapeProps {
 
 export function CompetitiveLandscape({ competitors }: CompetitiveLandscapeProps) {
   return (
-    <SectionCard title="Competitive Landscape" icon={Users} color="purple" className="xl:col-span-2">
+    <SectionCard title="Competitive Landscape" icon={Users} color="purple">
       <div className="grid gap-3">
         {competitors.slice(0, 5).map((comp, i) => (
           <div

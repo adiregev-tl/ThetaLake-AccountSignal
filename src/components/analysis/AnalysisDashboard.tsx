@@ -11,6 +11,8 @@ import { InvestorDocuments } from './sections/InvestorDocuments';
 import { TechNews } from './sections/TechNews';
 import { CaseStudies } from './sections/CaseStudies';
 import { CompetitiveLandscape } from './sections/CompetitiveLandscape';
+import { CompetitorMentions } from './sections/CompetitorMentions';
+import { LeadershipChanges } from './sections/LeadershipChanges';
 import { MAActivity } from './sections/MAActivity';
 import { GroundingSources } from './sections/GroundingSources';
 import { StockCard } from '../stock/StockCard';
@@ -70,87 +72,97 @@ export function AnalysisDashboard({
   const isCached = cachedDataTimestamp !== null && cachedDataTimestamp !== undefined;
   const isStale = isCached && isDataStale(cachedDataTimestamp);
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Company Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <h2 className="text-3xl font-bold text-white">{companyName}</h2>
+      <div className="flex flex-col gap-3 sm:gap-4">
+        {/* Company Name + Sentiment */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white">{companyName}</h2>
           <SentimentBadge sentiment={data.sentiment} />
-          {webSearchUsed && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-cyan-500/10 border border-cyan-500/30 rounded-full text-cyan-400 text-xs font-medium">
-              <Globe className="w-3 h-3" />
-              <span>Web Search</span>
-            </div>
-          )}
-          {webSearchError && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/30 rounded-full text-amber-400 text-xs font-medium" title={webSearchError}>
-              <AlertTriangle className="w-3 h-3" />
-              <span>Web Search Failed</span>
-            </div>
-          )}
-          {isCached && (
-            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-              isStale
-                ? 'bg-amber-500/10 border border-amber-500/30 text-amber-400'
-                : 'bg-zinc-500/10 border border-zinc-500/30 text-zinc-400'
-            }`}>
-              <Database className="w-3 h-3" />
-              <span>Cached {getRelativeTime(cachedDataTimestamp!)}</span>
-            </div>
-          )}
         </div>
-        <div className="flex items-center gap-3">
-          {/* Refresh button - show prominently if data is stale */}
-          {isCached && onRefresh && (
+
+        {/* Status Badges + Actions */}
+        <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
+          {/* Status badges */}
+          <div className="flex flex-wrap items-center gap-2">
+            {webSearchUsed && (
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-cyan-500/10 border border-cyan-500/30 rounded-full text-cyan-400 text-xs font-medium">
+                <Globe className="w-3 h-3" />
+                <span className="hidden xs:inline">Web Search</span>
+              </div>
+            )}
+            {webSearchError && (
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-500/10 border border-amber-500/30 rounded-full text-amber-400 text-xs font-medium" title={webSearchError}>
+                <AlertTriangle className="w-3 h-3" />
+                <span className="hidden xs:inline">Search Failed</span>
+              </div>
+            )}
+            {isCached && (
+              <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${
+                isStale
+                  ? 'bg-amber-500/10 border border-amber-500/30 text-amber-400'
+                  : 'bg-zinc-500/10 border border-zinc-500/30 text-zinc-400'
+              }`}>
+                <Database className="w-3 h-3" />
+                <span className="hidden sm:inline">Cached {getRelativeTime(cachedDataTimestamp!)}</span>
+                <span className="sm:hidden">{getRelativeTime(cachedDataTimestamp!)}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex items-center gap-2">
+            {isCached && onRefresh && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onRefresh}
+                disabled={isRefreshing}
+                className={`border-zinc-700 transition-colors h-8 px-2 sm:px-3 ${
+                  isStale
+                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 hover:bg-emerald-500/30'
+                    : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                }`}
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline ml-2">{isStale ? 'Refresh' : 'Refresh'}</span>
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
-              onClick={onRefresh}
-              disabled={isRefreshing}
-              className={`border-zinc-700 transition-colors ${
-                isStale
-                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 hover:bg-emerald-500/30'
+              onClick={onToggleBookmark}
+              className={`border-zinc-700 transition-colors h-8 px-2 sm:px-3 ${
+                isBookmarked
+                  ? 'bg-amber-500/20 text-amber-400 border-amber-500/50 hover:bg-amber-500/30'
                   : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
               }`}
             >
-              <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-              {isStale ? 'Refresh Data' : 'Refresh'}
+              {isBookmarked ? (
+                <>
+                  <BookmarkCheck className="w-4 h-4" />
+                  <span className="hidden sm:inline ml-2">Saved</span>
+                </>
+              ) : (
+                <>
+                  <Bookmark className="w-4 h-4" />
+                  <span className="hidden sm:inline ml-2">Save</span>
+                </>
+              )}
             </Button>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onToggleBookmark}
-            className={`border-zinc-700 transition-colors ${
-              isBookmarked
-                ? 'bg-amber-500/20 text-amber-400 border-amber-500/50 hover:bg-amber-500/30'
-                : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
-            }`}
-          >
-            {isBookmarked ? (
-              <>
-                <BookmarkCheck className="w-4 h-4 mr-2" />
-                Bookmarked
-              </>
-            ) : (
-              <>
-                <Bookmark className="w-4 h-4 mr-2" />
-                Bookmark
-              </>
-            )}
-          </Button>
+          </div>
         </div>
       </div>
 
       {/* Stale Data Warning Banner */}
       {isStale && onRefresh && (
-        <div className="flex items-center justify-between gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
           <div className="flex items-center gap-3">
             <Database className="w-5 h-5 text-amber-400 flex-shrink-0" />
             <div>
               <h4 className="text-amber-400 font-medium text-sm">Data may be outdated</h4>
               <p className="text-amber-400/70 text-xs mt-0.5">
-                This analysis was saved {getRelativeTime(cachedDataTimestamp!)}. Click refresh to get the latest data.
+                Saved {getRelativeTime(cachedDataTimestamp!)}
               </p>
             </div>
           </div>
@@ -158,7 +170,7 @@ export function AnalysisDashboard({
             size="sm"
             onClick={onRefresh}
             disabled={isRefreshing}
-            className="bg-amber-600 hover:bg-amber-500 text-white"
+            className="bg-amber-600 hover:bg-amber-500 text-white w-full sm:w-auto"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
             Refresh Now
@@ -168,12 +180,12 @@ export function AnalysisDashboard({
 
       {/* Web Search Error Banner */}
       {webSearchError && (
-        <div className="flex items-start gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+        <div className="flex items-start gap-3 p-3 sm:p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
           <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
             <h4 className="text-amber-400 font-medium text-sm">Web Search Unavailable</h4>
             <p className="text-amber-400/70 text-xs mt-1">{webSearchError}</p>
-            <p className="text-zinc-500 text-xs mt-2">
+            <p className="text-zinc-500 text-xs mt-2 hidden sm:block">
               Links in news, case studies, and investor documents may not work.
               Check your WebSearchAPI key in settings, or switch to Gemini/Perplexity for built-in web grounding.
             </p>
@@ -181,37 +193,33 @@ export function AnalysisDashboard({
         </div>
       )}
 
-      {/* Dashboard Grid */}
+      {/* Dashboard Grid - Reorganized for better space efficiency */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-        {/* Stock Card - 2 col (always show, with manual ticker input if not found) */}
+        {/* Row 1: Company Overview */}
         <StockCard ticker={ticker} companyName={companyName} companyInfo={companyInfo} />
-
-        {/* Executive Summary - 2 col */}
-        <ExecutiveSummary summary={data.summary} />
-
-        {/* Quick Facts - 1 col */}
         <QuickFacts facts={data.quickFacts} />
 
-        {/* Key Priorities - 1 col */}
+        {/* Row 2: Executive Summary - Full Width */}
+        <ExecutiveSummary summary={data.summary} />
+
+        {/* Row 3: Strategic Direction */}
         <KeyPriorities priorities={data.keyPriorities} />
-
-        {/* Growth Initiatives - 1 col */}
         <GrowthInitiatives initiatives={data.growthInitiatives} />
-
-        {/* Investor Documents - 1 col */}
-        <InvestorDocuments documents={data.investorDocs} companyInfo={companyInfo} />
-
-        {/* Tech News - 2 col */}
-        <TechNews news={data.techNews} />
-
-        {/* Case Studies - 1 col */}
-        <CaseStudies studies={data.caseStudies} />
-
-        {/* Competitive Landscape - 2 col */}
-        <CompetitiveLandscape competitors={data.competitors} />
-
-        {/* M&A Activity - 3 col (full width) */}
         <MAActivity activity={data.maActivity} />
+
+        {/* Row 4: News & Intelligence */}
+        <TechNews news={data.techNews} />
+        <LeadershipChanges changes={data.leadershipChanges || []} />
+
+        {/* Row 5: Competitive Intelligence - Even split */}
+        <div className="lg:col-span-2 xl:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <CompetitiveLandscape competitors={data.competitors} />
+          <CompetitorMentions mentions={data.competitorMentions || []} />
+        </div>
+
+        {/* Row 6: Documents & Resources */}
+        <InvestorDocuments documents={data.investorDocs} companyInfo={companyInfo} />
+        <CaseStudies studies={data.caseStudies} />
       </div>
 
       {/* Grounding Sources */}

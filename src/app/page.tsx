@@ -284,9 +284,54 @@ export default function Home() {
     }
   }, [companyName, companyInfo, handleSearch]);
 
-  const handleSaveApiKey = (key: string) => {
-    setKey(selectedProvider, key);
-    toast.success(`${PROVIDER_INFO[selectedProvider].name} API key saved`);
+  const handleSaveAllSettings = async (settings: {
+    provider: ProviderName;
+    model: string;
+    apiKey?: string;
+    webSearchProvider: 'tavily' | 'websearchapi' | 'none';
+    tavilyKey?: string | null;
+    webSearchKey?: string | null;
+  }) => {
+    // Save all settings to server API for admin
+    try {
+      const payload: Record<string, unknown> = {
+        default_provider: settings.provider,
+        [`${settings.provider}_model`]: settings.model,
+        web_search_provider: settings.webSearchProvider,
+      };
+
+      // Only include API key if provided (not empty)
+      if (settings.apiKey) {
+        payload[`${settings.provider}_api_key`] = settings.apiKey;
+      }
+
+      // Include web search keys if provided
+      if (settings.tavilyKey !== undefined) {
+        payload.tavily_api_key = settings.tavilyKey;
+      }
+      if (settings.webSearchKey !== undefined) {
+        payload.websearchapi_key = settings.webSearchKey;
+      }
+
+      const response = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save settings');
+      }
+
+      // Refresh server settings to update UI
+      await refreshSettings();
+      toast.success('Settings saved successfully');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save settings';
+      toast.error(errorMessage);
+      throw err; // Re-throw so modal knows save failed
+    }
   };
 
   const loaded = keysLoaded && historyLoaded && bookmarksLoaded && !authLoading && serverSettingsLoaded;
@@ -317,6 +362,14 @@ export default function Home() {
 
       <Header
         onSearch={handleSearch}
+        onClearResults={() => {
+          // Clear old results when user starts typing a new search
+          setCompanyName(null);
+          setCompanyInfo(null);
+          setAnalysisData(null);
+          setCachedDataTimestamp(null);
+          setError(null);
+        }}
         loading={loading}
         selectedProvider={effectiveProvider}
         selectedModel={effectiveModel}
@@ -631,18 +684,13 @@ export default function Home() {
         <ApiKeyModal
           open={showApiKeyModal}
           onOpenChange={setShowApiKeyModal}
-          selectedProvider={selectedProvider}
-          selectedModel={localSelectedModel}
-          onProviderChange={setSelectedProvider}
-          onModelChange={(model) => setSelectedModel(selectedProvider, model)}
-          onSaveApiKey={handleSaveApiKey}
-          currentKey={getKey(selectedProvider) || undefined}
-          webSearchProvider={webSearchProvider}
-          onWebSearchProviderChange={setWebSearchProvider}
-          tavilyApiKey={tavilyApiKey || undefined}
-          onSaveTavilyKey={setTavilyApiKey}
-          webSearchApiKey={webSearchApiKey || undefined}
-          onSaveWebSearchKey={setWebSearchApiKey}
+          selectedProvider={effectiveProvider}
+          selectedModel={effectiveModel}
+          currentKey={serverSettings.openai_api_key || serverSettings.anthropic_api_key || serverSettings.gemini_api_key || serverSettings.perplexity_api_key || ''}
+          webSearchProvider={effectiveWebSearchProvider}
+          tavilyApiKey={serverSettings.tavily_api_key || undefined}
+          webSearchApiKey={serverSettings.websearchapi_key || undefined}
+          onSaveAll={handleSaveAllSettings}
         />
       )}
     </div>

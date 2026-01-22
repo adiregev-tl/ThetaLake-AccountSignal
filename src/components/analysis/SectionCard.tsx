@@ -51,15 +51,15 @@ export function SectionCard({ title, icon: Icon, color, children, className }: S
   return (
     <div
       className={cn(
-        'card-hover rounded-xl border p-5',
+        'card-hover rounded-xl border p-3 sm:p-5',
         colors.border,
         colors.bg,
         className
       )}
     >
-      <div className={cn('flex items-center gap-2 mb-4', colors.header)}>
-        <Icon className="w-5 h-5" />
-        <h3 className="font-semibold text-sm uppercase tracking-wider">{title}</h3>
+      <div className={cn('flex items-center gap-2 mb-3 sm:mb-4', colors.header)}>
+        <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
+        <h3 className="font-semibold text-xs sm:text-sm uppercase tracking-wider">{title}</h3>
       </div>
       {children}
     </div>

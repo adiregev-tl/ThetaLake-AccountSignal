@@ -89,6 +89,19 @@ List 5 main competitors. Format:
 Competitor Name | Market Position | Key Differentiator
 [/COMPETITORS]
 
+[COMPETITOR_MENTIONS]
+Search for any mentions of "${companyName}" on the websites, press releases, case studies, or partner pages of these specific companies: Smarsh, Global Relay, NICE, Verint, Arctera, Veritas, Proofpoint, Shield, Behavox, Digital Reasoning, Mimecast, ZL Technologies.
+Look for: customer logos, case studies, partner announcements, press releases, or comparison mentions.
+IMPORTANT: Only include REAL URLs that actually exist on the competitor's website (e.g., https://www.smarsh.com/..., https://www.globalrelay.com/..., etc.). Do NOT use placeholder URLs.
+Format each finding as:
+Competitor Name | Mention Type (customer/partner/comparison/case_study/press_release/other) | Title | Full External URL | Date (YYYY-MM or YYYY if exact date unknown) | Brief summary
+[/COMPETITOR_MENTIONS]
+
+[LEADERSHIP_CHANGES]
+List any recent leadership changes, executive appointments, promotions, or departures in the past 12 months. Format:
+Name | New Role | Change Type (appointed/promoted/departed/expanded_role) | Date | Previous Role (if applicable) | Source URL
+[/LEADERSHIP_CHANGES]
+
 [MA_ACTIVITY]
 List mergers, acquisitions, and divestitures in the past 5 years. Format:
 Year | Type (Acquisition/Merger/Divestiture) | Target/Partner | Deal Value (if known) | Strategic Rationale

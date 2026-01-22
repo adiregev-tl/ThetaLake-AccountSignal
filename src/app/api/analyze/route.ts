@@ -3,8 +3,9 @@ import { createAIProvider } from '@/lib/ai/factory';
 import { AnalyzeRequest, AnalyzeResponse, ApiError } from '@/types/api';
 import { ProviderName, PROVIDER_INFO } from '@/types/analysis';
 import { searchCompanyNews, searchCompanyCaseStudies, searchCompanyInfo, searchInvestorDocuments } from '@/lib/services/webSearch';
-import { tavilySearchCompanyNews, tavilySearchCaseStudies, tavilySearchCompanyInfo, tavilySearchInvestorDocs } from '@/lib/services/tavilySearch';
+import { tavilySearchCompanyNews, tavilySearchCaseStudies, tavilySearchCompanyInfo, tavilySearchInvestorDocs, tavilySearchCompetitorMentions, tavilySearchLeadershipChanges, CompetitorMention } from '@/lib/services/tavilySearch';
 import { createClient } from '@/lib/supabase/server';
+import { parseLeadershipArticles } from '@/lib/ai/parseLeadershipNews';
 
 // Type for server settings
 interface ServerSettings {
@@ -116,18 +117,22 @@ export async function POST(request: NextRequest) {
       try {
         if (useTavily) {
           // Use Tavily for web search
-          const [newsResults, caseStudyResults, infoResults, investorDocsResults] = await Promise.all([
+          const [newsResults, caseStudyResults, infoResults, investorDocsResults, competitorMentionsResults, leadershipResults] = await Promise.all([
             tavilySearchCompanyNews(companyName.trim(), tavilyApiKey!),
             tavilySearchCaseStudies(companyName.trim(), tavilyApiKey!),
             tavilySearchCompanyInfo(companyName.trim(), tavilyApiKey!),
-            tavilySearchInvestorDocs(companyName.trim(), tavilyApiKey!)
+            tavilySearchInvestorDocs(companyName.trim(), tavilyApiKey!),
+            tavilySearchCompetitorMentions(companyName.trim(), tavilyApiKey!),
+            tavilySearchLeadershipChanges(companyName.trim(), tavilyApiKey!)
           ]);
 
           webSearchData = {
             news: newsResults.map(r => ({ title: r.title, url: r.url, description: r.content })),
             caseStudies: caseStudyResults.map(r => ({ title: r.title, url: r.url, description: r.content })),
             info: { sources: infoResults.sources.map(r => ({ title: r.title, url: r.url, description: r.content })) },
-            investorDocs: investorDocsResults.map(r => ({ title: r.title, url: r.url, description: r.content }))
+            investorDocs: investorDocsResults.map(r => ({ title: r.title, url: r.url, description: r.content })),
+            competitorMentions: competitorMentionsResults,
+            leadershipChanges: leadershipResults.map(r => ({ title: r.title, url: r.url, description: r.content }))
           };
         } else {
           // Use WebSearchAPI for web search
@@ -196,12 +201,63 @@ export async function POST(request: NextRequest) {
         }));
       }
 
+      // Replace competitor mentions with real web search results (Tavily only)
+      if (webSearchData.competitorMentions && webSearchData.competitorMentions.length > 0) {
+        analysis.competitorMentions = webSearchData.competitorMentions.map((item: CompetitorMention) => ({
+          competitorName: item.competitorName,
+          mentionType: item.mentionType,
+          title: item.title,
+          url: item.url,
+          summary: item.summary
+        }));
+      }
+
+      // Replace leadership changes with real web search results (Tavily only)
+      if (webSearchData.leadershipChanges && webSearchData.leadershipChanges.length > 0) {
+        // Filter out irrelevant pages first
+        const filteredArticles = webSearchData.leadershipChanges
+          .filter((item: { title: string; url: string; description: string }) => {
+            const urlLower = item.url.toLowerCase();
+            return !urlLower.includes('career') && !urlLower.includes('job') && !urlLower.includes('linkedin.com/jobs');
+          })
+          .map((item: { title: string; url: string; description: string }) => ({
+            title: item.title,
+            url: item.url,
+            content: item.description || ''
+          }));
+
+        // Parse articles to extract actual names and roles
+        const parsedChanges = parseLeadershipArticles(filteredArticles, companyName.trim());
+
+        if (parsedChanges.length > 0) {
+          analysis.leadershipChanges = parsedChanges;
+        } else {
+          // Fallback: show article titles if parsing found nothing
+          analysis.leadershipChanges = filteredArticles.slice(0, 6).map((item) => {
+            let source = '';
+            try {
+              source = new URL(item.url).hostname.replace('www.', '');
+            } catch {
+              source = 'Source';
+            }
+            return {
+              name: item.title,
+              role: item.content?.substring(0, 150) || '',
+              changeType: 'appointed' as const,
+              url: item.url,
+              source
+            };
+          });
+        }
+      }
+
       // Add web search sources to sources list
       const webSources = [
         ...webSearchData.news.map(n => n.url),
         ...webSearchData.caseStudies.map(c => c.url),
         ...webSearchData.investorDocs.map(d => d.url),
-        ...webSearchData.info.sources.map(s => s.url)
+        ...webSearchData.info.sources.map(s => s.url),
+        ...(webSearchData.competitorMentions || []).map((c: CompetitorMention) => c.url)
       ].filter(Boolean);
 
       if (webSources.length > 0) {
