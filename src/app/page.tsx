@@ -17,7 +17,25 @@ import { ProviderName, AnalysisResult, PROVIDER_INFO } from '@/types/analysis';
 import { AnalyzeResponse, ApiError, CacheMetadata } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Toaster, toast } from 'sonner';
+import { Users, Zap } from 'lucide-react';
+
+// Cache check response type
+interface CacheCheckInfo {
+  analyzedAt: string;
+  analyzedBy?: string;
+  provider: ProviderName;
+  ageMinutes: number;
+  isStale: boolean;
+}
 
 // Common company ticker mappings
 const COMPANY_TICKERS: Record<string, string> = {
@@ -152,6 +170,10 @@ export default function Home() {
   const [cachedDataTimestamp, setCachedDataTimestamp] = useState<number | null>(null);
   // Track shared cache metadata (from server-side cache)
   const [sharedCacheMetadata, setSharedCacheMetadata] = useState<CacheMetadata | null>(null);
+  // Cache confirmation dialog state
+  const [showCacheDialog, setShowCacheDialog] = useState(false);
+  const [pendingSearch, setPendingSearch] = useState<{ company: string; info?: CompanyInfo } | null>(null);
+  const [pendingCacheInfo, setPendingCacheInfo] = useState<CacheCheckInfo | null>(null);
 
   const {
     getKey,
@@ -179,26 +201,19 @@ export default function Home() {
   const effectiveHasKey = isAuthenticated ? serverHasKey(effectiveProvider) : hasKey(effectiveProvider);
   const effectiveWebSearchProvider = isAuthenticated ? serverWebSearchProvider : webSearchProvider;
 
-  const handleSearch = useCallback(
+  // Execute the actual analysis (called after cache check or when user chooses)
+  const executeAnalysis = useCallback(
     async (company: string, info?: CompanyInfo, forceRefresh = false) => {
-      // Check authentication first
-      if (!isAuthenticated) {
-        toast.error('Please sign in to analyze companies');
-        return;
-      }
-
       setLoading(true);
       setError(null);
       setCompanyName(company);
       setCompanyInfo(info || null);
       setAnalysisData(null);
-      setCachedDataTimestamp(null); // Fresh data, not from cache
-      setSharedCacheMetadata(null); // Clear shared cache metadata
+      setCachedDataTimestamp(null);
+      setSharedCacheMetadata(null);
       setActiveTab('search');
 
       try {
-        // For authenticated users, the server uses its own settings
-        // We just send the company name, server handles provider/model/keys
         const response = await fetch('/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -253,6 +268,43 @@ export default function Home() {
       }
     },
     [isAuthenticated, effectiveProvider, addToHistory]
+  );
+
+  // Check for cached analysis and show dialog if exists
+  const handleSearch = useCallback(
+    async (company: string, info?: CompanyInfo, forceRefresh = false) => {
+      // If forcing refresh, skip cache check
+      if (forceRefresh) {
+        executeAnalysis(company, info, true);
+        return;
+      }
+
+      // Check for existing cached analysis
+      try {
+        const response = await fetch('/api/analyze/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ companyName: company })
+        });
+
+        const data = await response.json();
+
+        if (data.exists && data.cacheInfo) {
+          // Cache exists - show confirmation dialog
+          setPendingSearch({ company, info });
+          setPendingCacheInfo(data.cacheInfo);
+          setShowCacheDialog(true);
+          return;
+        }
+      } catch (err) {
+        // If cache check fails, just proceed with analysis
+        console.error('Cache check failed:', err);
+      }
+
+      // No cache found - proceed with analysis
+      executeAnalysis(company, info, false);
+    },
+    [executeAnalysis]
   );
 
   const handleLoadFromHistory = useCallback((item: typeof history[0]) => {
@@ -721,6 +773,69 @@ export default function Home() {
         open={showAboutModal}
         onOpenChange={setShowAboutModal}
       />
+
+      {/* Cache Confirmation Dialog */}
+      <Dialog open={showCacheDialog} onOpenChange={setShowCacheDialog}>
+        <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <Users className="w-5 h-5 text-blue-400" />
+              Analysis Already Exists
+            </DialogTitle>
+            <DialogDescription className="text-zinc-400 mt-2">
+              {pendingCacheInfo && (
+                <>
+                  <strong className="text-white">{pendingSearch?.company}</strong> was analyzed{' '}
+                  {pendingCacheInfo.ageMinutes < 60
+                    ? `${pendingCacheInfo.ageMinutes} minutes ago`
+                    : pendingCacheInfo.ageMinutes < 1440
+                      ? `${Math.floor(pendingCacheInfo.ageMinutes / 60)} hours ago`
+                      : `${Math.floor(pendingCacheInfo.ageMinutes / 1440)} days ago`}
+                  {pendingCacheInfo.analyzedBy && ` by ${pendingCacheInfo.analyzedBy}`}
+                  {' '}using {PROVIDER_INFO[pendingCacheInfo.provider]?.name || pendingCacheInfo.provider}.
+                  {pendingCacheInfo.isStale && (
+                    <span className="block mt-2 text-amber-400">
+                      This analysis is more than 24 hours old and may be outdated.
+                    </span>
+                  )}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCacheDialog(false);
+                if (pendingSearch) {
+                  executeAnalysis(pendingSearch.company, pendingSearch.info, true);
+                }
+                setPendingSearch(null);
+                setPendingCacheInfo(null);
+              }}
+              className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800 flex items-center gap-2"
+            >
+              <Zap className="w-4 h-4" />
+              Run Fresh Analysis
+            </Button>
+            <Button
+              onClick={() => {
+                setShowCacheDialog(false);
+                if (pendingSearch) {
+                  // Load the cached version (forceRefresh = false)
+                  executeAnalysis(pendingSearch.company, pendingSearch.info, false);
+                }
+                setPendingSearch(null);
+                setPendingCacheInfo(null);
+              }}
+              className="bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-2"
+            >
+              <Database className="w-4 h-4" />
+              Use Cached Analysis
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -10,7 +10,24 @@ export interface AnalysisResult {
   competitorMentions: CompetitorMentionItem[];
   leadershipChanges: LeadershipChangeItem[];
   maActivity: MAItem[];
+  regulatoryLandscape: RegulatoryBodyMention[];
+  regulatoryEvents: RegulatoryEventItem[];
   sources: string[];
+}
+
+export interface RegulatoryBodyMention {
+  body: string; // e.g., SEC, FINRA, FCA, CFTC, ESMA
+  context: string; // Brief description of the regulatory relationship
+  url?: string; // Source URL
+}
+
+export interface RegulatoryEventItem {
+  date: string; // Year or specific date
+  regulatoryBody: string; // Which regulator took action
+  eventType: 'fine' | 'penalty' | 'settlement' | 'enforcement' | 'investigation' | 'other';
+  amount?: string; // Fine/penalty amount if applicable
+  description: string; // Brief summary of the event
+  url: string; // Link to news article or official source
 }
 
 export interface QuickFacts {

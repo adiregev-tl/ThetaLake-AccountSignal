@@ -14,6 +14,8 @@ import { CaseStudies } from './sections/CaseStudies';
 import { CompetitorMentions } from './sections/CompetitorMentions';
 import { LeadershipChanges } from './sections/LeadershipChanges';
 import { MAActivity } from './sections/MAActivity';
+import { RegulatoryLandscape } from './sections/RegulatoryLandscape';
+import { RegulatoryEvents } from './sections/RegulatoryEvents';
 import { GroundingSources } from './sections/GroundingSources';
 import { StockCard } from '../stock/StockCard';
 import { Bookmark, BookmarkCheck, Globe, AlertTriangle, Database, RefreshCw, Users } from 'lucide-react';
@@ -281,6 +283,12 @@ export function AnalysisDashboard({
         <div className="lg:col-span-2 xl:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-4">
           <CompetitorMentions mentions={data.competitorMentions || []} />
           <InvestorDocuments documents={data.investorDocs} companyInfo={companyInfo} />
+        </div>
+
+        {/* Row 6: Regulatory - 50/50 Split */}
+        <div className="lg:col-span-2 xl:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <RegulatoryLandscape regulators={data.regulatoryLandscape || []} />
+          <RegulatoryEvents events={data.regulatoryEvents || []} />
         </div>
       </div>
 

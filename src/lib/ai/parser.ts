@@ -1,4 +1,4 @@
-import { AnalysisResult, QuickFacts, LinkItem, MAItem, CompetitorMentionItem, LeadershipChangeItem } from '@/types/analysis';
+import { AnalysisResult, QuickFacts, LinkItem, MAItem, CompetitorMentionItem, LeadershipChangeItem, RegulatoryBodyMention, RegulatoryEventItem } from '@/types/analysis';
 
 function parseTagContent(text: string, tag: string): string {
   const regex = new RegExp(`\\[${tag}\\]([\\s\\S]*?)\\[\\/${tag}\\]`, 'i');
@@ -191,6 +191,49 @@ function normalizeSentiment(sentiment: string): AnalysisResult['sentiment'] {
   return 'NEUTRAL';
 }
 
+function parseRegulatoryLandscape(content: string): RegulatoryBodyMention[] {
+  if (!content) return [];
+
+  return content
+    .split('\n')
+    .filter((line) => line.trim())
+    .map((line) => {
+      const parts = line.split('|').map((p) => p.trim());
+      // Format: Regulatory Body | Context | Source URL
+      return {
+        body: parts[0] || '',
+        context: parts[1] || '',
+        url: extractUrl(parts[2]) || undefined
+      };
+    })
+    .filter((r) => r.body && r.context);
+}
+
+function parseRegulatoryEvents(content: string): RegulatoryEventItem[] {
+  if (!content) return [];
+  const validEventTypes = ['fine', 'penalty', 'settlement', 'enforcement', 'investigation', 'other'];
+
+  return content
+    .split('\n')
+    .filter((line) => line.trim())
+    .map((line) => {
+      const parts = line.split('|').map((p) => p.trim());
+      // Format: Date | Regulatory Body | Event Type | Amount | Description | URL
+      const eventType = (parts[2] || 'other').toLowerCase().replace(/\s+/g, '_');
+      const url = extractUrl(parts[5]) || '';
+
+      return {
+        date: parts[0] || '',
+        regulatoryBody: parts[1] || '',
+        eventType: (validEventTypes.includes(eventType) ? eventType : 'other') as RegulatoryEventItem['eventType'],
+        amount: parts[3] && parts[3] !== 'N/A' && parts[3] !== '-' ? parts[3] : undefined,
+        description: parts[4] || '',
+        url: url
+      };
+    })
+    .filter((e) => e.date && e.regulatoryBody && e.description && e.url);
+}
+
 export function parseTaggedResponse(text: string): AnalysisResult {
   return {
     summary: parseTagContent(text, 'SUMMARY'),
@@ -204,6 +247,8 @@ export function parseTaggedResponse(text: string): AnalysisResult {
     competitorMentions: parseCompetitorMentions(parseTagContent(text, 'COMPETITOR_MENTIONS')),
     leadershipChanges: parseLeadershipChanges(parseTagContent(text, 'LEADERSHIP_CHANGES')),
     maActivity: parseMAActivity(parseTagContent(text, 'MA_ACTIVITY')),
+    regulatoryLandscape: parseRegulatoryLandscape(parseTagContent(text, 'REGULATORY_LANDSCAPE')),
+    regulatoryEvents: parseRegulatoryEvents(parseTagContent(text, 'REGULATORY_EVENTS')),
     sources: parseSources(parseTagContent(text, 'SOURCES'))
   };
 }

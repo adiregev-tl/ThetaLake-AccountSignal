@@ -106,6 +106,19 @@ List mergers, acquisitions, and divestitures in the past 5 years. Format:
 Year | Type (Acquisition/Merger/Divestiture) | Target/Partner | Deal Value (if known) | Strategic Rationale
 [/MA_ACTIVITY]
 
+[REGULATORY_LANDSCAPE]
+Search the company's Legal, Compliance, and About pages, as well as Wikipedia and other public sources for information about their regulatory environment.
+List the regulatory bodies that oversee or interact with "${companyName}". Include bodies such as SEC, FINRA, FCA, CFTC, ESMA, OCC, FDIC, Federal Reserve, PRA, MAS, ASIC, BaFin, AMF, and other relevant financial/industry regulators.
+Format: Regulatory Body | Brief context of the relationship (e.g., "Primary securities regulator", "Banking supervisor", "Registered broker-dealer") | Source URL (if available)
+[/REGULATORY_LANDSCAPE]
+
+[REGULATORY_EVENTS]
+Search for enforcement actions, fines, penalties, settlements, or investigations involving "${companyName}" from the past 5 years (2020-present).
+Include actions from any regulatory body (SEC, FINRA, DOJ, FCA, CFTC, state attorneys general, etc.).
+IMPORTANT: Only include REAL events with verifiable sources. Do not fabricate events.
+Format: Date (YYYY-MM or YYYY) | Regulatory Body | Event Type (fine/penalty/settlement/enforcement/investigation) | Amount (if applicable) | Brief description | News Article URL
+[/REGULATORY_EVENTS]
+
 [SOURCES]
 List all source URLs used, one per line.
 [/SOURCES]`;

@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export type SectionColor = 'emerald' | 'cyan' | 'amber' | 'blue' | 'purple' | 'neutral';
+export type SectionColor = 'emerald' | 'cyan' | 'amber' | 'blue' | 'purple' | 'red' | 'neutral';
 
 interface SectionCardProps {
   title: string;
@@ -37,6 +37,11 @@ const colorClasses: Record<SectionColor, { border: string; bg: string; header: s
     border: 'border-purple-500/30',
     bg: 'bg-purple-500/5',
     header: 'text-purple-400'
+  },
+  red: {
+    border: 'border-red-500/30',
+    bg: 'bg-red-500/5',
+    header: 'text-red-400'
   },
   neutral: {
     border: 'border-zinc-700',
