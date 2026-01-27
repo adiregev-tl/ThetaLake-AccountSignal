@@ -483,10 +483,17 @@ export function StockCard({ ticker: initialTicker, companyName, companyInfo }: S
               className={`text-xs px-2 py-1 rounded ${
                 data.marketState === 'REGULAR'
                   ? 'bg-emerald-500/20 text-emerald-400'
+                  : data.marketState === 'PRE' || data.marketState === 'PREPRE'
+                  ? 'bg-amber-500/20 text-amber-400'
+                  : data.marketState === 'POST' || data.marketState === 'POSTPOST'
+                  ? 'bg-blue-500/20 text-blue-400'
                   : 'bg-muted text-muted-foreground'
               }`}
             >
-              {data.marketState === 'REGULAR' ? 'Market Open' : 'Market Closed'}
+              {data.marketState === 'REGULAR' ? 'Market Open'
+                : data.marketState === 'PRE' || data.marketState === 'PREPRE' ? 'Pre-Market'
+                : data.marketState === 'POST' || data.marketState === 'POSTPOST' ? 'After Hours'
+                : 'Market Closed'}
             </span>
           </div>
           <div className="flex items-center gap-2">

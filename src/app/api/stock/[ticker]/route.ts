@@ -73,7 +73,7 @@ export async function GET(
     const [dailyResponse, historyResponse] = await Promise.all([
       fetch(
         `${YAHOO_CHART_API}/${encodeURIComponent(ticker)}?interval=1d&range=1d`,
-        { headers, next: { revalidate: 60 } }
+        { headers, cache: 'no-store' }  // Always fetch fresh for current price/market state
       ),
       fetch(
         `${YAHOO_CHART_API}/${encodeURIComponent(ticker)}?interval=${rangeConfig.interval}&range=${range}`,
