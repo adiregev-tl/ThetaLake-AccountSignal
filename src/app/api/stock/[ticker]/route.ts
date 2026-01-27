@@ -102,6 +102,23 @@ export async function GET(
 
     const meta = dailyResult.meta;
 
+    // Determine market state from trading periods if not provided
+    let marketState = meta.marketState;
+    if (!marketState && meta.currentTradingPeriod) {
+      const now = Math.floor(Date.now() / 1000); // Current time in seconds
+      const { pre, regular, post } = meta.currentTradingPeriod;
+
+      if (regular && now >= regular.start && now < regular.end) {
+        marketState = 'REGULAR';
+      } else if (post && now >= post.start && now < post.end) {
+        marketState = 'POST';
+      } else if (pre && now >= pre.start && now < pre.end) {
+        marketState = 'PRE';
+      } else {
+        marketState = 'CLOSED';
+      }
+    }
+
     // Get history data
     const historyIndicators = historyResult?.indicators?.quote?.[0];
     const timestamps = historyResult?.timestamp || [];
@@ -143,7 +160,7 @@ export async function GET(
       change: change,
       changePercent: changePercent,
       currency: meta.currency,
-      marketState: meta.marketState,
+      marketState: marketState || 'CLOSED',
       dayHigh: meta.regularMarketDayHigh || 0,
       dayLow: meta.regularMarketDayLow || 0,
       dayOpen: dailyResult.indicators?.quote?.[0]?.open?.[0] || meta.regularMarketPrice,
