@@ -299,20 +299,20 @@ export function UsageCosts() {
 
 function CostCard({ title, data }: { title: string; data: UsagePeriod }) {
   return (
-    <div className="bg-card/50 border border-border rounded-lg p-3">
+    <div className="bg-card/50 border border-border rounded-lg p-3 overflow-hidden">
       <p className="text-xs text-muted-foreground mb-1">{title}</p>
       <p className="text-lg font-bold text-foreground">{formatCost(data.totalCost)}</p>
-      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-        <span className="flex items-center gap-1">
-          <TrendingUp className="w-3 h-3" />
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground mt-1">
+        <span className="flex items-center gap-0.5">
+          <TrendingUp className="w-2.5 h-2.5 flex-shrink-0" />
           {data.totalRequests}
         </span>
-        <span className="flex items-center gap-1">
-          <Cpu className="w-3 h-3" />
+        <span className="flex items-center gap-0.5">
+          <Cpu className="w-2.5 h-2.5 flex-shrink-0" />
           {formatCost(data.aiCost)}
         </span>
-        <span className="flex items-center gap-1">
-          <Search className="w-3 h-3" />
+        <span className="flex items-center gap-0.5">
+          <Search className="w-2.5 h-2.5 flex-shrink-0" />
           {formatCost(data.searchCost)}
         </span>
       </div>
