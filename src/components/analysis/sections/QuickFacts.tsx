@@ -22,9 +22,9 @@ export function QuickFacts({ facts }: QuickFactsProps) {
     <SectionCard title="Quick Facts" icon={FileText} color="emerald">
       <div className="space-y-2">
         {entries.map(([key, value]) => (
-          <div key={key} className="flex justify-between text-sm">
-            <span className="text-muted-foreground">{factLabels[key] || key}</span>
-            <span className="text-foreground font-medium">{value}</span>
+          <div key={key} className="grid grid-cols-[auto_1fr] gap-x-4 text-sm">
+            <span className="text-muted-foreground whitespace-nowrap">{factLabels[key] || key}</span>
+            <span className="text-foreground font-medium text-right">{value}</span>
           </div>
         ))}
         {entries.length === 0 && (
