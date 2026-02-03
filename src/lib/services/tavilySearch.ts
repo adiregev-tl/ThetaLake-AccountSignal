@@ -107,7 +107,6 @@ export async function tavilySearchInvestorDocs(
 
 // Competitor companies to search for mentions
 const COMPETITOR_DOMAINS = [
-  'thetalake.com',
   'smarsh.com',
   'globalrelay.com',
   'nice.com',
@@ -123,7 +122,6 @@ const COMPETITOR_DOMAINS = [
 ];
 
 const COMPETITOR_NAMES: Record<string, string> = {
-  'thetalake.com': 'Theta Lake',
   'smarsh.com': 'Smarsh',
   'globalrelay.com': 'Global Relay',
   'nice.com': 'NICE',

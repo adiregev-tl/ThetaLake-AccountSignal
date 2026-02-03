@@ -9,7 +9,7 @@ interface CompetitorMentionsProps {
 }
 
 const COMPETITOR_LIST = [
-  'Theta Lake', 'Smarsh', 'Global Relay', 'NICE', 'Verint', 'Arctera', 'Veritas',
+  'Smarsh', 'Global Relay', 'NICE', 'Verint', 'Arctera', 'Veritas',
   'Proofpoint', 'Shield', 'Behavox', 'Digital Reasoning', 'Mimecast', 'ZL Technologies'
 ];
 

@@ -86,7 +86,7 @@ Format: Vendor: Title | URL | Summary
 [/CASE_STUDIES]
 
 [COMPETITOR_MENTIONS]
-Search for TECHNOLOGY-RELATED mentions of "${companyName}" involving these compliance/archiving competitors: Theta Lake, Smarsh, Global Relay, NICE, Verint, Arctera, Veritas, Proofpoint, Shield, Behavox, Digital Reasoning, Mimecast, ZL Technologies.
+Search for TECHNOLOGY-RELATED mentions of "${companyName}" involving these compliance/archiving competitors: Smarsh, Global Relay, NICE, Verint, Arctera, Veritas, Proofpoint, Shield, Behavox, Digital Reasoning, Mimecast, ZL Technologies.
 
 INCLUDE: Technology partnerships, product integrations, customer case studies, competitive comparisons, technology announcements, product launches, platform integrations.
 
@@ -102,7 +102,7 @@ Name | New Role | Change Type (appointed/promoted/departed/expanded_role) | Date
 [/LEADERSHIP_CHANGES]
 
 [MA_ACTIVITY]
-List ONLY verified, publicly announced mergers, acquisitions, and divestitures from the past 5 years.
+List ONLY verified, publicly announced mergers, acquisitions, and divestitures from the past 10 years.
 CRITICAL: Only include deals with REAL company names that you can verify from news sources. Do NOT make up or hallucinate company names like "Fintech Startup XYZ" or "Regional Bank ABC". If you cannot verify real M&A activity, leave this section empty.
 Format: Year | Type (Acquisition/Merger/Divestiture) | Target/Partner (real verified company name) | Deal Value (if known) | Strategic Rationale
 [/MA_ACTIVITY]
