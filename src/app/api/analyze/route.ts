@@ -53,15 +53,28 @@ function getProviderApiKey(settings: ServerSettings, provider: ProviderName): st
   }
 }
 
+// Validate model belongs to provider, return default if not
+function validateModelForProvider(model: string | undefined, provider: ProviderName): string {
+  const providerInfo = PROVIDER_INFO[provider];
+  const validModels = providerInfo.models.map(m => m.id);
+
+  if (model && validModels.includes(model)) {
+    return model;
+  }
+  // Model doesn't belong to this provider, use default
+  return providerInfo.defaultModel;
+}
+
 // Get model for a provider from settings
 function getProviderModel(settings: ServerSettings, provider: ProviderName): string {
+  let model: string | undefined;
   switch (provider) {
-    case 'openai': return settings.openai_model || 'gpt-4o';
-    case 'anthropic': return settings.anthropic_model || 'claude-sonnet-4-20250514';
-    case 'gemini': return settings.gemini_model || 'gemini-2.5-flash';
-    case 'perplexity': return settings.perplexity_model || 'sonar-pro';
-    default: return 'gpt-4o';
+    case 'openai': model = settings.openai_model; break;
+    case 'anthropic': model = settings.anthropic_model; break;
+    case 'gemini': model = settings.gemini_model; break;
+    case 'perplexity': model = settings.perplexity_model; break;
   }
+  return validateModelForProvider(model, provider);
 }
 
 export async function POST(request: NextRequest) {
