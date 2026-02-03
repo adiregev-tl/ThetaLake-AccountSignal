@@ -98,11 +98,36 @@ const HALLUCINATED_MA_PATTERNS = [
   // Placeholder patterns
   /\[(company|name|target)\]/i,
   /\b(example|sample|placeholder|tbd|n\/a)\b/i,
+  // Format instructions being returned as data
+  /target\/partner/i,
+  /real\s+verified\s+company/i,
+  /if\s+known/i,
+  /strategic\s+rationale/i,
+  /deal\s+value/i,
 ];
 
-function isHallucinatedMAEntry(target: string): boolean {
+// Patterns for invalid M&A type field
+const INVALID_MA_TYPE_PATTERNS = [
+  /acquisition\/merger\/divestiture/i,
+  /type\s*\(/i,
+  /format:/i,
+];
+
+function isHallucinatedMAEntry(target: string, type?: string): boolean {
   const targetLower = target.toLowerCase().trim();
-  return HALLUCINATED_MA_PATTERNS.some(pattern => pattern.test(targetLower));
+  const typeLower = (type || '').toLowerCase().trim();
+
+  // Check target for hallucinated patterns
+  if (HALLUCINATED_MA_PATTERNS.some(pattern => pattern.test(targetLower))) {
+    return true;
+  }
+
+  // Check type for invalid patterns (format instructions)
+  if (INVALID_MA_TYPE_PATTERNS.some(pattern => pattern.test(typeLower))) {
+    return true;
+  }
+
+  return false;
 }
 
 function parseMAActivity(content: string): MAItem[] {
@@ -120,7 +145,7 @@ function parseMAActivity(content: string): MAItem[] {
         rationale: parts[4] || undefined
       };
     })
-    .filter((m) => m.year && m.target && !isHallucinatedMAEntry(m.target));
+    .filter((m) => m.year && m.target && !isHallucinatedMAEntry(m.target, m.type));
 }
 
 function parseCompetitorMentions(content: string): CompetitorMentionItem[] {
