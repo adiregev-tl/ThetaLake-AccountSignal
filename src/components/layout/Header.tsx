@@ -205,7 +205,10 @@ export function Header({
   };
 
   const currentProviderInfo = PROVIDER_INFO[selectedProvider];
-  const currentModelInfo = currentProviderInfo.models.find(m => m.id === selectedModel);
+  // Validate that the model belongs to the current provider, otherwise use provider's default
+  const currentModelInfo = currentProviderInfo.models.find(m => m.id === selectedModel)
+    || currentProviderInfo.models.find(m => m.id === currentProviderInfo.defaultModel)
+    || currentProviderInfo.models[0];
 
   return (
     <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-lg border-b border-border">
@@ -308,7 +311,7 @@ export function Header({
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{currentProviderInfo.name}</span>
                     <span className="text-muted-foreground">•</span>
-                    <span className="text-muted-foreground">{currentModelInfo?.name || selectedModel}</span>
+                    <span className="text-muted-foreground">{currentModelInfo.name}</span>
                   </div>
                   {currentProviderInfo.supportsWebGrounding && (
                     <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" title="Web search" />
@@ -322,7 +325,7 @@ export function Header({
                 <div className="hidden md:flex items-center gap-2 px-3 py-2 bg-card border border-input rounded-md text-sm">
                   <span className="font-medium text-muted-foreground">{currentProviderInfo.name}</span>
                   <span className="text-muted-foreground">•</span>
-                  <span className="text-muted-foreground">{currentModelInfo?.name || selectedModel}</span>
+                  <span className="text-muted-foreground">{currentModelInfo.name}</span>
                   {currentProviderInfo.supportsWebGrounding && (
                     <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" title="Web search" />
                   )}
