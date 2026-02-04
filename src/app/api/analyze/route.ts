@@ -4,7 +4,7 @@ import { AnalyzeRequest, AnalyzeResponse, ApiError, CacheMetadata } from '@/type
 import { ProviderName, PROVIDER_INFO, AnalysisResult } from '@/types/analysis';
 import { searchCompanyNews, searchCompanyCaseStudies, searchCompanyInfo, searchInvestorDocuments } from '@/lib/services/webSearch';
 import { tavilySearchCompanyNews, tavilySearchCaseStudies, tavilySearchCompanyInfo, tavilySearchInvestorDocs, tavilySearchCompetitorMentions, tavilySearchLeadershipChanges, tavilySearchRegulatoryEvents, CompetitorMention, RegulatoryEvent } from '@/lib/services/tavilySearch';
-import { claudeSearchCompanyNews, claudeSearchCaseStudies, claudeSearchCompanyInfo, claudeSearchInvestorDocs, claudeSearchLeadershipChanges } from '@/lib/services/claudeSearch';
+import { claudeSearchCompanyNews, claudeSearchCaseStudies, claudeSearchCompanyInfo, claudeSearchInvestorDocs, claudeSearchLeadershipChanges, claudeSearchRegulatoryEvents, claudeSearchCompetitorMentions } from '@/lib/services/claudeSearch';
 import { createClient } from '@/lib/supabase/server';
 import { parseLeadershipArticles } from '@/lib/ai/parseLeadershipNews';
 import { deduplicateRegulatoryEvents } from '@/lib/ai/parser';
@@ -217,12 +217,14 @@ export async function POST(request: NextRequest) {
           };
         } else if (useClaudeSearch) {
           // Use Claude web search (powered by Brave)
-          const [newsResults, caseStudyResults, infoResults, investorDocsResults, leadershipResults] = await Promise.all([
+          const [newsResults, caseStudyResults, infoResults, investorDocsResults, leadershipResults, regulatoryResults, competitorResults] = await Promise.all([
             claudeSearchCompanyNews(companyName.trim(), apiKey),
             claudeSearchCaseStudies(companyName.trim(), apiKey),
             claudeSearchCompanyInfo(companyName.trim(), apiKey),
             claudeSearchInvestorDocs(companyName.trim(), apiKey),
-            claudeSearchLeadershipChanges(companyName.trim(), apiKey)
+            claudeSearchLeadershipChanges(companyName.trim(), apiKey),
+            claudeSearchRegulatoryEvents(companyName.trim(), apiKey),
+            claudeSearchCompetitorMentions(companyName.trim(), apiKey)
           ]);
 
           webSearchData = {
@@ -230,7 +232,9 @@ export async function POST(request: NextRequest) {
             caseStudies: caseStudyResults.map(r => ({ title: r.title, url: r.url, description: r.content })),
             info: { sources: infoResults.sources.map(r => ({ title: r.title, url: r.url, description: r.content })) },
             investorDocs: investorDocsResults.map(r => ({ title: r.title, url: r.url, description: r.content })),
-            leadershipChanges: leadershipResults.map(r => ({ title: r.title, url: r.url, description: r.content }))
+            leadershipChanges: leadershipResults.map(r => ({ title: r.title, url: r.url, description: r.content })),
+            regulatoryEvents: regulatoryResults,
+            competitorMentions: competitorResults
           };
         } else {
           // Use WebSearchAPI for web search
