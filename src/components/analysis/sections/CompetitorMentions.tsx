@@ -1,6 +1,6 @@
 'use client';
 
-import { Search, ExternalLink, Building2, Handshake, Scale, FileText, Newspaper, MoreHorizontal, Calendar, Plug } from 'lucide-react';
+import { Search, ExternalLink, Building2, Handshake, Scale, FileText, Newspaper, MoreHorizontal, Calendar, Plug, AlertTriangle } from 'lucide-react';
 import { SectionCard } from '../SectionCard';
 import { CompetitorMentionItem } from '@/types/analysis';
 
@@ -101,12 +101,20 @@ export function CompetitorMentions({ mentions }: CompetitorMentionsProps) {
                               {mention.summary}
                             </p>
                           )}
-                          {mention.date && (
-                            <span className="flex items-center gap-1 text-muted-foreground text-xs mt-1">
-                              <Calendar className="w-3 h-3" />
-                              {mention.date}
-                            </span>
-                          )}
+                          <div className="flex items-center gap-2 mt-1">
+                            {mention.date && (
+                              <span className="flex items-center gap-1 text-muted-foreground text-xs">
+                                <Calendar className="w-3 h-3" />
+                                {mention.date}
+                              </span>
+                            )}
+                            {mention.unverified && (
+                              <span className="flex items-center gap-1 text-amber-500 text-xs">
+                                <AlertTriangle className="w-3 h-3" />
+                                Unverified
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </a>
                     );

@@ -10,6 +10,39 @@ export interface ReleaseNote {
 
 export const releaseNotes: ReleaseNote[] = [
   {
+    version: '1.2.2',
+    date: '2026-02-05',
+    highlights: [
+      'Anti-hallucination system for competitor mentions',
+      'Re-enabled competitor mentions with improved reliability',
+    ],
+    changes: [
+      {
+        category: 'Added',
+        items: [
+          'Multi-layer heuristic scoring system to filter hallucinated results',
+          'URL quality scoring (rejects generic listing pages)',
+          'Content quality scoring (detects marketing fluff vs. grounded facts)',
+          '"Unverified" badge for medium-confidence results',
+        ],
+      },
+      {
+        category: 'Changed',
+        items: [
+          'Search queries now target press releases and news sources',
+          'Competitor mentions now show confidence-based filtering',
+        ],
+      },
+      {
+        category: 'Fixed',
+        items: [
+          'Reduced hallucinated/fabricated competitor mention URLs',
+          'Improved filtering for generic listing pages (/customers/, /case-studies/)',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.2.1',
     date: '2026-02-05',
     highlights: [

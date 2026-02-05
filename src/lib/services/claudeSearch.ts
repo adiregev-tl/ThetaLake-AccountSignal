@@ -283,6 +283,8 @@ export interface ClaudeCompetitorMention {
   url: string;
   summary: string;
   mentionType: 'customer' | 'partner' | 'case_study' | 'press_release' | 'integration' | 'other';
+  confidence?: number;    // 0-100 confidence score from anti-hallucination system
+  unverified?: boolean;   // true if 60-74 confidence (show warning badge)
 }
 
 // Competitor domain mappings for URL validation
@@ -416,9 +418,142 @@ export async function claudeSearchCompetitorMentions(
   companyName: string,
   apiKey: string
 ): Promise<ClaudeCompetitorMention[]> {
-  // DISABLED: Competitor mentions are disabled due to unreliable results from search APIs.
-  // Both Tavily and Claude web search frequently hallucinate URLs and content that
-  // cannot be reliably validated in a serverless environment.
-  console.log(`Competitor mentions search disabled for: ${companyName}`);
-  return [];
+  const { scoreAndFilterResults, generateCompetitorSearchQueries } = await import('./antiHallucination');
+
+  const client = new Anthropic({ apiKey });
+  const mentions: ClaudeCompetitorMention[] = [];
+  const seenUrls = new Set<string>();
+
+  // Iterate through all competitors
+  for (const [competitorName] of Object.entries(COMPETITOR_DOMAINS)) {
+    try {
+      // Use targeted queries
+      const queries = generateCompetitorSearchQueries(companyName, competitorName);
+      const query = queries[0]; // Use the press release query (most reliable)
+
+      const systemPrompt = `You are a research assistant. Search for business relationships between "${companyName}" and "${competitorName}".
+
+Look for:
+- Press releases about partnerships or customer relationships
+- News articles about deployments or implementations
+- Case studies mentioning "${companyName}" as a customer
+
+Return as JSON:
+{
+  "results": [
+    {"title": "...", "url": "...", "content": "snippet of relevant content..."}
+  ]
+}
+
+IMPORTANT:
+- Only include REAL results with actual, working URLs
+- Do not fabricate or guess URLs
+- Only include results where "${companyName}" is explicitly mentioned
+- Focus on press releases from businesswire.com, prnewswire.com, or news sites`;
+
+      const response = await client.messages.create({
+        model: 'claude-sonnet-4-5-20250929',
+        max_tokens: 2048,
+        tools: [
+          {
+            type: 'web_search_20250305' as const,
+            name: 'web_search',
+            max_uses: 2,
+          },
+        ] as unknown as Anthropic.Tool[],
+        messages: [
+          {
+            role: 'user',
+            content: query,
+          },
+        ],
+        system: systemPrompt,
+      });
+
+      // Extract results from response
+      const rawResults: { title: string; url: string; content: string }[] = [];
+
+      for (const block of response.content) {
+        if (block.type === 'text') {
+          try {
+            const jsonMatch = block.text.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              if (parsed.results && Array.isArray(parsed.results)) {
+                for (const r of parsed.results) {
+                  if (r.title && r.url) {
+                    rawResults.push({
+                      title: r.title,
+                      url: r.url,
+                      content: r.content || '',
+                    });
+                  }
+                }
+              }
+            }
+          } catch {
+            // JSON parsing failed
+          }
+        }
+      }
+
+      if (rawResults.length === 0) continue;
+
+      // Apply anti-hallucination scoring
+      const scoredResults = scoreAndFilterResults(
+        rawResults.map(r => ({
+          title: r.title,
+          url: r.url,
+          content: r.content,
+          score: 0.8, // Claude results assumed to have decent relevance
+        })),
+        companyName,
+        competitorName,
+        {
+          minConfidence: 60,
+          maxResults: 2,
+          debug: process.env.NODE_ENV === 'development'
+        }
+      );
+
+      for (const result of scoredResults) {
+        if (seenUrls.has(result.url)) continue;
+        seenUrls.add(result.url);
+
+        // Infer mention type
+        let mentionType: ClaudeCompetitorMention['mentionType'] = 'other';
+        const urlLower = result.url.toLowerCase();
+        const contentLower = result.content.toLowerCase();
+
+        if (urlLower.includes('case-study') || contentLower.includes('case study')) {
+          mentionType = 'case_study';
+        } else if (urlLower.includes('press') || urlLower.includes('news') || urlLower.includes('businesswire') || urlLower.includes('prnewswire')) {
+          mentionType = 'press_release';
+        } else if (contentLower.includes('partner')) {
+          mentionType = 'partner';
+        } else if (contentLower.includes('customer') || contentLower.includes('client')) {
+          mentionType = 'customer';
+        } else if (contentLower.includes('integration') || contentLower.includes('integrates')) {
+          mentionType = 'integration';
+        }
+
+        mentions.push({
+          competitorName,
+          title: result.title,
+          url: result.url,
+          summary: result.content.substring(0, 150) + (result.content.length > 150 ? '...' : ''),
+          mentionType,
+          confidence: result.confidence,
+          unverified: result.unverified,
+        });
+      }
+    } catch (err) {
+      console.warn(`Failed to search Claude for ${competitorName}:`, err);
+    }
+  }
+
+  // Sort by confidence
+  mentions.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+
+  return mentions.slice(0, 10);
 }

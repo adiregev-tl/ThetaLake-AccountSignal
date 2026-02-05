@@ -142,6 +142,8 @@ export interface CompetitorMention {
   url: string;
   summary: string;
   mentionType: 'customer' | 'partner' | 'case_study' | 'press_release' | 'integration' | 'other';
+  confidence?: number;    // 0-100 confidence score from anti-hallucination system
+  unverified?: boolean;   // true if 60-74 confidence (show warning badge)
 }
 
 function inferMentionType(url: string, content: string): CompetitorMention['mentionType'] {
@@ -429,16 +431,85 @@ export async function tavilySearchCompetitorMentions(
   companyName: string,
   apiKey: string
 ): Promise<CompetitorMention[]> {
-  // DISABLED: Competitor mentions are disabled due to unreliable results from search APIs.
-  // The search APIs (Tavily/Claude) frequently return hallucinated/fabricated URLs and content
-  // that cannot be reliably validated in a serverless environment.
-  //
-  // To re-enable, implement a more robust validation system that:
-  // 1. Uses a dedicated web scraping service to verify URLs
-  // 2. Caches validated results to reduce API calls
-  // 3. Has human review for new competitor mentions
-  console.log(`Competitor mentions search disabled for: ${companyName}`);
-  return [];
+  const mentions: CompetitorMention[] = [];
+  const seenUrls = new Set<string>();
+
+  // Import anti-hallucination module
+  const { scoreAndFilterResults, generateCompetitorSearchQueries } = await import('./antiHallucination');
+
+  // Search across all competitor sites using better query patterns
+  for (const domain of COMPETITOR_DOMAINS) {
+    const competitorName = COMPETITOR_NAMES[domain];
+
+    try {
+      // Use targeted queries that are less likely to return hallucinated results
+      const queries = generateCompetitorSearchQueries(companyName, competitorName);
+
+      // Run first two queries (press releases and announcements)
+      const searchResults: TavilySearchResult[] = [];
+
+      for (const query of queries.slice(0, 2)) {
+        try {
+          const response = await tavilySearch(query, apiKey, {
+            maxResults: 3,
+            includeAnswer: false,
+            searchDepth: 'advanced'
+          });
+          searchResults.push(...response.results);
+        } catch (err) {
+          console.warn(`Search query failed: ${query}`, err);
+        }
+      }
+
+      if (searchResults.length === 0) continue;
+
+      // Apply anti-hallucination scoring
+      const scoredResults = scoreAndFilterResults(
+        searchResults.map(r => ({
+          title: r.title,
+          url: r.url,
+          content: r.content,
+          score: r.score
+        })),
+        companyName,
+        competitorName,
+        {
+          minConfidence: 60,
+          maxResults: 3,
+          debug: process.env.NODE_ENV === 'development'
+        }
+      );
+
+      for (const result of scoredResults) {
+        // Skip duplicates
+        if (seenUrls.has(result.url)) continue;
+        seenUrls.add(result.url);
+
+        // Additional business relationship check
+        if (!isBusinessRelationship(result.content, result.title, companyName)) {
+          continue;
+        }
+
+        mentions.push({
+          competitorName,
+          title: result.title,
+          url: result.url,
+          summary: createTechSummary(result.content, companyName),
+          mentionType: inferMentionType(result.url, result.content),
+          confidence: result.confidence,
+          unverified: result.unverified
+        });
+      }
+    } catch (err) {
+      console.warn(`Failed to search competitor ${competitorName} for ${companyName}:`, err);
+    }
+  }
+
+  // Sort by confidence (highest first)
+  mentions.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+
+  // Return top 10 mentions
+  return mentions.slice(0, 10);
 }
 
 export interface RegulatoryEvent {
