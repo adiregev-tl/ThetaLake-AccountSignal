@@ -362,22 +362,51 @@ function isGenericListingPage(url: string): boolean {
   }
 }
 
-// Validate URL actually exists and returns 200 (not 404)
-async function validateUrlExists(url: string): Promise<boolean> {
+// Validate URL actually exists, returns 200, and contains the company name
+async function validateUrlAndContent(url: string, companyName: string): Promise<boolean> {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
+    const timeout = setTimeout(() => controller.abort(), 8000);
 
     const response = await fetch(url, {
-      method: 'HEAD',
+      method: 'GET',
       signal: controller.signal,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; MarketPulse/1.0)'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml',
       }
     });
 
     clearTimeout(timeout);
-    return response.ok;
+
+    if (response.status !== 200) {
+      console.warn(`URL returned status ${response.status}: ${url}`);
+      return false;
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('text/html')) {
+      return false;
+    }
+
+    const text = await response.text();
+    const companyLower = companyName.toLowerCase();
+    const textLower = text.toLowerCase();
+
+    if (!textLower.includes(companyLower)) {
+      console.warn(`Company name "${companyName}" not found in page: ${url}`);
+      return false;
+    }
+
+    // Check for soft 404
+    const soft404Indicators = ['page not found', '404', 'not found', 'no longer available'];
+    for (const indicator of soft404Indicators) {
+      if (textLower.includes(indicator)) {
+        return false;
+      }
+    }
+
+    return true;
   } catch {
     return false;
   }
@@ -509,12 +538,12 @@ DO NOT return generic listing page URLs. Only return URLs to specific content pa
     }
   }
 
-  // Validate all URLs actually exist (filter out 404s and broken links)
+  // Validate all URLs actually exist AND contain company name
   const validatedMentions = await Promise.all(
     mentions.map(async (mention) => {
-      const exists = await validateUrlExists(mention.url);
-      if (!exists) {
-        console.warn(`URL does not exist or returns error: ${mention.url}`);
+      const isValid = await validateUrlAndContent(mention.url, companyName);
+      if (!isValid) {
+        console.warn(`URL validation failed: ${mention.url}`);
         return null;
       }
       return mention;

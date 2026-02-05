@@ -303,24 +303,71 @@ function isGenericListingPage(url: string): boolean {
   }
 }
 
-// Validate URL actually exists and returns 200 (not 404)
-async function validateUrlExists(url: string): Promise<boolean> {
+// Validate URL actually exists, returns 200, and contains the company name
+async function validateUrlAndContent(url: string, companyName: string): Promise<boolean> {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    const timeout = setTimeout(() => controller.abort(), 8000); // 8 second timeout
 
+    // Use GET instead of HEAD - many servers don't handle HEAD properly
     const response = await fetch(url, {
-      method: 'HEAD',
+      method: 'GET',
       signal: controller.signal,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; MarketPulse/1.0)'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml',
       }
     });
 
     clearTimeout(timeout);
-    return response.ok; // Returns true for 2xx status codes
-  } catch {
-    return false; // Network error, timeout, or other issue
+
+    // Must be 200 OK (not redirect, not error)
+    if (response.status !== 200) {
+      console.warn(`URL returned status ${response.status}: ${url}`);
+      return false;
+    }
+
+    // Check content type is HTML
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('text/html')) {
+      console.warn(`URL is not HTML (${contentType}): ${url}`);
+      return false;
+    }
+
+    // Get page content and verify company name appears
+    const text = await response.text();
+    const companyLower = companyName.toLowerCase();
+    const textLower = text.toLowerCase();
+
+    // Company name must appear in the actual page content
+    if (!textLower.includes(companyLower)) {
+      console.warn(`Company name "${companyName}" not found in page content: ${url}`);
+      return false;
+    }
+
+    // Check for soft 404 indicators
+    const soft404Indicators = [
+      'page not found',
+      'page doesn\'t exist',
+      'page does not exist',
+      '404',
+      'not found',
+      'no longer available',
+      'has been removed',
+      'content unavailable'
+    ];
+
+    for (const indicator of soft404Indicators) {
+      if (textLower.includes(indicator)) {
+        console.warn(`Soft 404 detected (${indicator}): ${url}`);
+        return false;
+      }
+    }
+
+    return true;
+  } catch (err) {
+    console.warn(`Failed to validate URL: ${url}`, err);
+    return false;
   }
 }
 
@@ -424,11 +471,11 @@ export async function tavilySearchCompetitorMentions(
         return true;
       });
 
-      // Validate URLs actually exist
+      // Validate URLs actually exist AND contain the company name
       const validatedResults = await Promise.all(
         relevantResults.map(async (result) => {
-          const exists = await validateUrlExists(result.url);
-          return exists ? result : null;
+          const isValid = await validateUrlAndContent(result.url, companyName);
+          return isValid ? result : null;
         })
       );
 
