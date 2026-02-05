@@ -91,32 +91,46 @@ export function AnalysisDashboard({
 
     setIsExporting(true);
     try {
-      // Dynamic import to avoid SSR issues
-      const html2pdfModule = await import('html2pdf.js');
-      const html2pdf = html2pdfModule.default;
+      // Dynamic imports to avoid SSR issues
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
 
       const element = dashboardRef.current;
       const filename = `${companyName.replace(/[^a-zA-Z0-9]/g, '_')}_Analysis_${new Date().toISOString().split('T')[0]}.pdf`;
 
-      const opt = {
-        margin: 10,
-        filename,
-        image: { type: 'jpeg' as const, quality: 0.95 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-        },
-        jsPDF: {
-          unit: 'mm' as const,
-          format: 'a4' as const,
-          orientation: 'portrait' as const,
-        },
-      };
+      // Capture the element as canvas
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+      });
 
-      // Use the simpler API with save() which handles download
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (html2pdf() as any).set(opt).from(element).save();
+      // Calculate dimensions for A4
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      // Create PDF
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Add image to first page
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      // Add additional pages if content is longer than one page
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      // Save the PDF
+      pdf.save(filename);
     } catch (error) {
       console.error('PDF export failed:', error);
       alert('PDF export failed. Please try again.');
