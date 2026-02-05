@@ -13,25 +13,22 @@ export const releaseNotes: ReleaseNote[] = [
     version: '1.2.1',
     date: '2026-02-05',
     highlights: [
-      'Anti-hallucination filtering for competitor mentions',
-      'URL validation with content verification',
+      'Competitor mentions temporarily disabled',
+      'Improved data reliability',
     ],
     changes: [
       {
-        category: 'Fixed',
+        category: 'Changed',
         items: [
-          'Competitor mentions no longer show hallucinated/fabricated results',
-          'URLs are now validated by fetching actual page content',
-          'Company name must appear in both URL path and page content',
-          '404 errors and soft 404s are now properly detected and filtered',
-          'Generic listing pages (/customers/, /case-studies/) are rejected',
+          'Competitor mentions temporarily disabled due to unreliable search API results',
+          'Build number now updates correctly with each deployment',
         ],
       },
       {
-        category: 'Changed',
+        category: 'Fixed',
         items: [
-          'Competitor mentions require stricter validation before display',
-          'Build number now updates correctly with each deployment',
+          'Eliminated hallucinated/fabricated competitor mention data',
+          'Improved overall data quality by removing unreliable sources',
         ],
       },
     ],

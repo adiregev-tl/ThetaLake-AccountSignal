@@ -429,77 +429,16 @@ export async function tavilySearchCompetitorMentions(
   companyName: string,
   apiKey: string
 ): Promise<CompetitorMention[]> {
-  const mentions: CompetitorMention[] = [];
-  const companyLower = companyName.toLowerCase().replace(/[^a-z0-9]/g, '');
-  const companyWords = companyName.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-
-  // Search for the company across all competitor domains in parallel
-  const searchPromises = COMPETITOR_DOMAINS.map(async (domain) => {
-    try {
-      const response = await tavilySearch(
-        `"${companyName}" site:${domain} (customer OR "case study" OR partnership OR announcement)`,
-        apiKey,
-        { maxResults: 3, includeAnswer: false, searchDepth: 'advanced' }
-      );
-
-      // AGGRESSIVE filtering - only accept results with very high confidence
-      const relevantResults = response.results.filter(result => {
-        const urlLower = result.url.toLowerCase();
-        const path = new URL(result.url).pathname.toLowerCase();
-
-        // CRITICAL: URL must contain company name or a significant word from company name
-        // This is the strongest anti-hallucination check
-        const urlContainsCompany = companyWords.some(word =>
-          path.includes(word) || urlLower.includes(word)
-        );
-
-        if (!urlContainsCompany) {
-          console.warn(`Rejecting - company name not in URL: ${result.url}`);
-          return false;
-        }
-
-        // Verify URL belongs to the competitor domain
-        if (!isValidCompetitorUrl(result.url, domain)) {
-          return false;
-        }
-
-        // Reject generic listing pages
-        if (isGenericListingPage(result.url)) {
-          return false;
-        }
-
-        return true;
-      });
-
-      // Validate URLs actually exist AND contain the company name
-      const validatedResults = await Promise.all(
-        relevantResults.map(async (result) => {
-          const isValid = await validateUrlAndContent(result.url, companyName);
-          return isValid ? result : null;
-        })
-      );
-
-      return validatedResults
-        .filter((r): r is TavilySearchResult => r !== null)
-        .map(result => ({
-          competitorName: COMPETITOR_NAMES[domain] || domain,
-          title: result.title,
-          url: result.url,
-          summary: createTechSummary(result.content, companyName),
-          mentionType: inferMentionType(result.url, result.content)
-        }));
-    } catch (err) {
-      console.warn(`Failed to search ${domain} for ${companyName}:`, err);
-      return [];
-    }
-  });
-
-  const results = await Promise.all(searchPromises);
-  results.forEach(competitorResults => {
-    mentions.push(...competitorResults);
-  });
-
-  return mentions;
+  // DISABLED: Competitor mentions are disabled due to unreliable results from search APIs.
+  // The search APIs (Tavily/Claude) frequently return hallucinated/fabricated URLs and content
+  // that cannot be reliably validated in a serverless environment.
+  //
+  // To re-enable, implement a more robust validation system that:
+  // 1. Uses a dedicated web scraping service to verify URLs
+  // 2. Caches validated results to reduce API calls
+  // 3. Has human review for new competitor mentions
+  console.log(`Competitor mentions search disabled for: ${companyName}`);
+  return [];
 }
 
 export interface RegulatoryEvent {
