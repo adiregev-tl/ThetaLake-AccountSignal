@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useRef } from 'react';
 import { AnalysisResult, ProviderName, PROVIDER_INFO } from '@/types/analysis';
 import { CacheMetadata } from '@/types/api';
 import { CompanyInfo } from '@/components/layout/Header';
@@ -18,7 +19,7 @@ import { RegulatoryLandscape } from './sections/RegulatoryLandscape';
 import { RegulatoryEvents } from './sections/RegulatoryEvents';
 import { GroundingSources } from './sections/GroundingSources';
 import { StockCard } from '../stock/StockCard';
-import { Bookmark, BookmarkCheck, Globe, AlertTriangle, Database, RefreshCw, Users } from 'lucide-react';
+import { Bookmark, BookmarkCheck, Globe, AlertTriangle, Database, RefreshCw, Users, Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface AnalysisDashboardProps {
@@ -74,6 +75,9 @@ export function AnalysisDashboard({
   onRefresh,
   isRefreshing
 }: AnalysisDashboardProps) {
+  const [isExporting, setIsExporting] = useState(false);
+  const dashboardRef = useRef<HTMLDivElement>(null);
+
   // Local cache (bookmarks/history)
   const isCached = cachedDataTimestamp !== null && cachedDataTimestamp !== undefined;
   const isStale = isCached && isDataStale(cachedDataTimestamp);
@@ -81,8 +85,46 @@ export function AnalysisDashboard({
   // Shared cache (server-side)
   const isSharedCache = sharedCacheMetadata !== null && sharedCacheMetadata !== undefined;
   const isSharedCacheStale = isSharedCache && sharedCacheMetadata.ageMinutes > 24 * 60;
+
+  const handleExportPDF = async () => {
+    if (!dashboardRef.current || isExporting) return;
+
+    setIsExporting(true);
+    try {
+      // Dynamic import to avoid SSR issues
+      const html2pdf = (await import('html2pdf.js')).default;
+
+      const element = dashboardRef.current;
+      const filename = `${companyName.replace(/[^a-zA-Z0-9]/g, '_')}_Analysis_${new Date().toISOString().split('T')[0]}.pdf`;
+
+      const opt = {
+        margin: [10, 10, 10, 10] as [number, number, number, number],
+        filename,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          letterRendering: true,
+          scrollY: 0,
+        },
+        jsPDF: {
+          unit: 'mm' as const,
+          format: 'a4' as const,
+          orientation: 'portrait' as const,
+        },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+      };
+
+      await html2pdf().set(opt).from(element).save();
+    } catch (error) {
+      console.error('PDF export failed:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div ref={dashboardRef} className="space-y-4 sm:space-y-6">
       {/* Company Header */}
       <div className="flex flex-col gap-3 sm:gap-4">
         {/* Company Name + Sentiment */}
@@ -174,6 +216,25 @@ export function AnalysisDashboard({
                 <>
                   <Bookmark className="w-4 h-4" />
                   <span className="hidden sm:inline ml-2">Save</span>
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportPDF}
+              disabled={isExporting}
+              className="border-border text-muted-foreground hover:text-foreground hover:bg-accent transition-colors h-8 px-2 sm:px-3"
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="hidden sm:inline ml-2">Exporting...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  <span className="hidden sm:inline ml-2">PDF</span>
                 </>
               )}
             </Button>
