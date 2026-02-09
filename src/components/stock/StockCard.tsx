@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { TrendingUp, TrendingDown, RefreshCw, Search, ChevronRight, EyeOff } from 'lucide-react';
+import { TrendingUp, TrendingDown, RefreshCw, Search, ChevronRight } from 'lucide-react';
 import { CompanyInfo } from '@/components/layout/Header';
 import { SectionCard } from '../analysis/SectionCard';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -42,7 +42,7 @@ interface StockCardProps {
   ticker?: string;
   companyName?: string;
   companyInfo?: CompanyInfo | null;
-  onHide?: () => void;
+  className?: string;
 }
 
 type TimeRange = '1d' | '5d' | '1mo' | 'ytd' | '1y' | '2y' | '5y';
@@ -252,7 +252,7 @@ function StockChart({
   );
 }
 
-export function StockCard({ ticker: initialTicker, companyName, companyInfo, onHide }: StockCardProps) {
+export function StockCard({ ticker: initialTicker, companyName, companyInfo, className = "xl:col-span-2" }: StockCardProps) {
   const [data, setData] = useState<StockData | null>(null);
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -364,7 +364,7 @@ export function StockCard({ ticker: initialTicker, companyName, companyInfo, onH
   // Show loading skeleton
   if ((loading || searching) && !data && !showOptions) {
     return (
-      <SectionCard title="Stock Quote" icon={TrendingUp} color="emerald" className="xl:col-span-2">
+      <SectionCard title="Stock Quote" icon={TrendingUp} color="emerald" className={className}>
         <div className="space-y-4">
           <div className="flex items-center gap-2 text-muted-foreground text-sm">
             <Search className="w-4 h-4 animate-pulse" />
@@ -384,7 +384,7 @@ export function StockCard({ ticker: initialTicker, companyName, companyInfo, onH
   // Show ticker options when multiple matches found
   if (showOptions && tickerOptions.length > 0) {
     return (
-      <SectionCard title="Stock Quote" icon={TrendingUp} color="emerald" className="xl:col-span-2">
+      <SectionCard title="Stock Quote" icon={TrendingUp} color="emerald" className={className}>
         <div className="py-2">
           <div className="text-muted-foreground text-sm mb-4">
             Multiple tickers found for <span className="text-foreground font-medium">{companyName}</span>. Select one:
@@ -435,7 +435,7 @@ export function StockCard({ ticker: initialTicker, companyName, companyInfo, onH
   // Show ticker input when no ticker available or error
   if (!data) {
     return (
-      <SectionCard title="Stock Quote" icon={TrendingUp} color="emerald" className="xl:col-span-2">
+      <SectionCard title="Stock Quote" icon={TrendingUp} color="emerald" className={className}>
         <div className="py-4">
           {error && (
             <div className="text-red-400 text-sm mb-4 text-center">{error}</div>
@@ -474,7 +474,7 @@ export function StockCard({ ticker: initialTicker, companyName, companyInfo, onH
   const isRangePositive = rangeChange >= 0;
 
   return (
-    <SectionCard title="Stock Quote" icon={TrendingUp} color="emerald" className="xl:col-span-2">
+    <SectionCard title="Stock Quote" icon={TrendingUp} color="emerald" className={className}>
       <div className="space-y-4">
         {/* Header: Ticker, Price, Market State */}
         <div className="flex items-center justify-between">
@@ -512,15 +512,6 @@ export function StockCard({ ticker: initialTicker, companyName, companyInfo, onH
               <RefreshCw className={`w-4 h-4 ${loading || chartLoading ? 'animate-spin' : ''}`} />
               <span className="text-xs font-medium hidden sm:inline">Refresh</span>
             </button>
-            {onHide && (
-              <button
-                onClick={onHide}
-                className="flex items-center gap-1.5 text-muted-foreground hover:text-red-400 px-2 py-1.5 rounded-lg hover:bg-red-500/10 border border-transparent hover:border-red-500/30 transition-colors"
-                title="Hide stock chart"
-              >
-                <EyeOff className="w-4 h-4" />
-              </button>
-            )}
           </div>
         </div>
 

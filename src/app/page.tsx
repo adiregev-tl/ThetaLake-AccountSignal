@@ -154,6 +154,7 @@ export default function Home() {
     getSelectedModel: getServerModel,
     hasKey: serverHasKey,
     webSearchProvider: serverWebSearchProvider,
+    showStockChart: serverShowStockChart,
     refreshSettings
   } = useServerSettings();
   const [loading, setLoading] = useState(false);
@@ -369,6 +370,7 @@ export default function Home() {
     webSearchProvider: 'tavily' | 'claude' | 'websearchapi' | 'none';
     tavilyKey?: string | null;
     webSearchKey?: string | null;
+    showStockChart?: boolean;
   }) => {
     // Save all settings to server API for admin
     try {
@@ -377,6 +379,11 @@ export default function Home() {
         [`${settings.provider}_model`]: settings.model,
         web_search_provider: settings.webSearchProvider,
       };
+
+      // Display settings
+      if (settings.showStockChart !== undefined) {
+        payload.show_stock_chart = settings.showStockChart;
+      }
 
       // Only include API key if provided (not empty)
       if (settings.apiKey) {
@@ -573,6 +580,7 @@ export default function Home() {
                 sharedCacheMetadata={sharedCacheMetadata}
                 onRefresh={handleRefresh}
                 isRefreshing={loading}
+                showStockChart={serverShowStockChart}
               />
             )}
           </TabsContent>
@@ -767,6 +775,7 @@ export default function Home() {
           webSearchProvider={effectiveWebSearchProvider}
           tavilyApiKey={serverSettings.tavily_api_key || undefined}
           webSearchApiKey={serverSettings.websearchapi_key || undefined}
+          showStockChart={serverShowStockChart}
           onSaveAll={handleSaveAllSettings}
         />
       )}

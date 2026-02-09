@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ExternalLink, Eye, EyeOff, Check, Settings, Key, Search, Cpu, Loader2, X, CheckCircle2, XCircle, Users, Trash2, Shield, User, DollarSign } from 'lucide-react';
+import { ExternalLink, Eye, EyeOff, Check, Settings, Key, Search, Cpu, Loader2, X, CheckCircle2, XCircle, Users, Trash2, Shield, User, DollarSign, LineChart } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -22,6 +22,7 @@ interface SaveSettings {
   webSearchProvider: WebSearchProvider;
   tavilyKey?: string | null;
   webSearchKey?: string | null;
+  showStockChart?: boolean;
 }
 
 interface UserProfile {
@@ -41,6 +42,7 @@ interface ApiKeyModalProps {
   webSearchProvider: WebSearchProvider;
   tavilyApiKey?: string;
   webSearchApiKey?: string;
+  showStockChart?: boolean;
   onSaveAll: (settings: SaveSettings) => Promise<void>;
 }
 
@@ -53,6 +55,7 @@ export function ApiKeyModal({
   webSearchProvider: initialWebSearchProvider,
   tavilyApiKey,
   webSearchApiKey,
+  showStockChart: initialShowStockChart = false,
   onSaveAll
 }: ApiKeyModalProps) {
   const [selectedProvider, setSelectedProvider] = useState<ProviderName>(initialProvider);
@@ -75,6 +78,7 @@ export function ApiKeyModal({
   const [testingWebSearch, setTestingWebSearch] = useState(false);
   const [webSearchTestResult, setWebSearchTestResult] = useState<{ valid: boolean; error?: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [stockChartEnabled, setStockChartEnabled] = useState(initialShowStockChart);
 
   useEffect(() => {
     if (open) {
@@ -84,10 +88,11 @@ export function ApiKeyModal({
       setTavilyKey(tavilyApiKey || '');
       setWebKey(webSearchApiKey || '');
       setWebSearchProvider(initialWebSearchProvider);
+      setStockChartEnabled(initialShowStockChart);
       setKeyTestResult(null);
       setWebSearchTestResult(null);
     }
-  }, [open, initialProvider, initialModel, currentKey, tavilyApiKey, webSearchApiKey, initialWebSearchProvider]);
+  }, [open, initialProvider, initialModel, currentKey, tavilyApiKey, webSearchApiKey, initialWebSearchProvider, initialShowStockChart]);
 
   // Reset web search test result when keys change
   useEffect(() => {
@@ -222,6 +227,7 @@ export function ApiKeyModal({
         webSearchProvider,
         tavilyKey: tavilyKey.trim() || null,
         webSearchKey: webKey.trim() || null,
+        showStockChart: stockChartEnabled,
       });
       onOpenChange(false);
     } catch {
@@ -443,6 +449,33 @@ export function ApiKeyModal({
                 <span>Configure web search in the Web Search tab for real-time data</span>
               </div>
             )}
+
+            {/* Display Options */}
+            <div className="space-y-2 pt-2 border-t border-zinc-800">
+              <label className="text-sm font-medium text-zinc-300">Display Options</label>
+              <button
+                type="button"
+                onClick={() => setStockChartEnabled(!stockChartEnabled)}
+                className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all text-left ${
+                  stockChartEnabled
+                    ? 'border-emerald-500 bg-emerald-500/10'
+                    : 'border-zinc-700 hover:border-zinc-600'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <LineChart className={`w-4 h-4 ${stockChartEnabled ? 'text-emerald-400' : 'text-zinc-500'}`} />
+                  <div>
+                    <div className="font-medium text-sm text-white">Stock Chart</div>
+                    <div className="text-xs text-zinc-500">Show live stock quotes for public companies</div>
+                  </div>
+                </div>
+                <div className={`w-9 h-5 rounded-full transition-colors flex items-center ${
+                  stockChartEnabled ? 'bg-emerald-500 justify-end' : 'bg-zinc-600 justify-start'
+                }`}>
+                  <div className="w-4 h-4 rounded-full bg-white mx-0.5" />
+                </div>
+              </button>
+            </div>
           </div>
         )}
 

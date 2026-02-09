@@ -304,6 +304,7 @@ export function Header({
               {/* Provider/Model Display - Hidden on mobile, shown on desktop */}
               {isAdmin && (
                 <Button
+                  type="button"
                   variant="outline"
                   onClick={onSettingsClick}
                   className="hidden md:flex bg-card border-input text-muted-foreground hover:bg-accent hover:text-foreground justify-between gap-2"

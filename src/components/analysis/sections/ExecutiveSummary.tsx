@@ -3,11 +3,12 @@ import { SectionCard } from '../SectionCard';
 
 interface ExecutiveSummaryProps {
   summary: string;
+  className?: string;
 }
 
-export function ExecutiveSummary({ summary }: ExecutiveSummaryProps) {
+export function ExecutiveSummary({ summary, className = "lg:col-span-2 xl:col-span-3" }: ExecutiveSummaryProps) {
   return (
-    <SectionCard title="Executive Summary" icon={Building2} color="emerald" className="lg:col-span-2 xl:col-span-3">
+    <SectionCard title="Executive Summary" icon={Building2} color="emerald" className={className}>
       <p className="text-foreground leading-relaxed">{summary}</p>
     </SectionCard>
   );

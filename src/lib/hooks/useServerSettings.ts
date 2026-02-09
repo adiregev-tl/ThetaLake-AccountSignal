@@ -13,6 +13,7 @@ interface ServerSettings {
   gemini_model: string;
   perplexity_model: string;
   web_search_provider: WebSearchProvider;
+  show_stock_chart: boolean;
   // API keys are masked for non-admins, so we just check if they exist
   openai_api_key: string | null;
   anthropic_api_key: string | null;
@@ -30,6 +31,7 @@ const DEFAULT_SETTINGS: ServerSettings = {
   gemini_model: PROVIDER_INFO.gemini.defaultModel,
   perplexity_model: PROVIDER_INFO.perplexity.defaultModel,
   web_search_provider: 'none',
+  show_stock_chart: false,
   openai_api_key: null,
   anthropic_api_key: null,
   gemini_api_key: null,
@@ -67,6 +69,7 @@ export function useServerSettings() {
             gemini_model: data.gemini_model || PROVIDER_INFO.gemini.defaultModel,
             perplexity_model: data.perplexity_model || PROVIDER_INFO.perplexity.defaultModel,
             web_search_provider: data.web_search_provider || 'none',
+            show_stock_chart: data.show_stock_chart ?? false,
             openai_api_key: data.openai_api_key,
             anthropic_api_key: data.anthropic_api_key,
             gemini_api_key: data.gemini_api_key,
@@ -130,6 +133,7 @@ export function useServerSettings() {
           gemini_model: data.gemini_model || PROVIDER_INFO.gemini.defaultModel,
           perplexity_model: data.perplexity_model || PROVIDER_INFO.perplexity.defaultModel,
           web_search_provider: data.web_search_provider || 'none',
+          show_stock_chart: data.show_stock_chart ?? false,
           openai_api_key: data.openai_api_key,
           anthropic_api_key: data.anthropic_api_key,
           gemini_api_key: data.gemini_api_key,
@@ -152,6 +156,7 @@ export function useServerSettings() {
     getSelectedModel,
     hasKey,
     webSearchProvider: settings.web_search_provider,
+    showStockChart: settings.show_stock_chart,
     isAdmin: settings.isAdmin,
     refreshSettings,
   };

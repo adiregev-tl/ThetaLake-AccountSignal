@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { AnalysisResult, ProviderName, PROVIDER_INFO } from '@/types/analysis';
 import { CacheMetadata } from '@/types/api';
 import { CompanyInfo } from '@/components/layout/Header';
@@ -19,7 +19,7 @@ import { RegulatoryLandscape } from './sections/RegulatoryLandscape';
 import { RegulatoryEvents } from './sections/RegulatoryEvents';
 import { GroundingSources } from './sections/GroundingSources';
 import { StockCard } from '../stock/StockCard';
-import { Bookmark, BookmarkCheck, Globe, AlertTriangle, Database, RefreshCw, Users, Download, Loader2, LineChart, ChevronRight } from 'lucide-react';
+import { Bookmark, BookmarkCheck, Globe, AlertTriangle, Database, RefreshCw, Users, Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface AnalysisDashboardProps {
@@ -38,6 +38,7 @@ interface AnalysisDashboardProps {
   sharedCacheMetadata?: CacheMetadata | null;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  showStockChart?: boolean;
 }
 
 // Helper function to format relative time
@@ -73,25 +74,11 @@ export function AnalysisDashboard({
   cachedDataTimestamp,
   sharedCacheMetadata,
   onRefresh,
-  isRefreshing
+  isRefreshing,
+  showStockChart
 }: AnalysisDashboardProps) {
   const [isExporting, setIsExporting] = useState(false);
-  const [showStockChart, setShowStockChart] = useState(false);
   const dashboardRef = useRef<HTMLDivElement>(null);
-
-  // Load stock chart preference from localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem('marketpulse_show_stock_chart');
-    if (stored === 'true') {
-      setShowStockChart(true);
-    }
-  }, []);
-
-  const toggleStockChart = () => {
-    const next = !showStockChart;
-    setShowStockChart(next);
-    localStorage.setItem('marketpulse_show_stock_chart', String(next));
-  };
 
   // Local cache (bookmarks/history)
   const isCached = cachedDataTimestamp !== null && cachedDataTimestamp !== undefined;
@@ -307,23 +294,14 @@ export function AnalysisDashboard({
 
       {/* Dashboard Grid - Reorganized for better space efficiency */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-        {/* Row 1: Company Overview */}
-        {showStockChart ? (
-          <StockCard ticker={ticker} companyName={companyName} companyInfo={companyInfo} onHide={toggleStockChart} />
-        ) : (
-          <button
-            onClick={toggleStockChart}
-            className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-border hover:border-emerald-500/50 bg-card/50 hover:bg-emerald-500/5 text-muted-foreground hover:text-emerald-500 transition-all cursor-pointer min-h-[80px] group"
-          >
-            <LineChart className="w-4 h-4" />
-            <span className="text-sm font-medium">Show Stock Chart</span>
-            <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
-          </button>
-        )}
+        {/* Row 1: Executive Summary (2/3) + Quick Facts (1/3) */}
+        <ExecutiveSummary summary={data.summary} className="xl:col-span-2" />
         <QuickFacts facts={data.quickFacts} />
 
-        {/* Row 2: Executive Summary - Full Width */}
-        <ExecutiveSummary summary={data.summary} />
+        {/* Row 2: Stock Chart - Full Width (if enabled) */}
+        {showStockChart && (
+          <StockCard ticker={ticker} companyName={companyName} companyInfo={companyInfo} className="lg:col-span-2 xl:col-span-3" />
+        )}
 
         {/* Row 3: Strategic Direction */}
         <KeyPriorities priorities={data.keyPriorities} />

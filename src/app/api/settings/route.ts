@@ -15,6 +15,7 @@ interface AppSettingsUpdate {
   web_search_provider?: string;
   tavily_api_key?: string | null;
   websearchapi_key?: string | null;
+  show_stock_chart?: boolean;
   updated_by?: string;
 }
 
@@ -73,6 +74,7 @@ export async function GET() {
           gemini_model: 'gemini-2.5-flash',
           perplexity_model: 'sonar-pro',
           web_search_provider: 'none',
+          show_stock_chart: false,
           openai_api_key: null,
           anthropic_api_key: null,
           gemini_api_key: null,
@@ -183,6 +185,9 @@ export async function PUT(request: NextRequest) {
     }
     if ('tavily_api_key' in body) updateData.tavily_api_key = body.tavily_api_key;
     if ('websearchapi_key' in body) updateData.websearchapi_key = body.websearchapi_key;
+
+    // Display settings
+    if ('show_stock_chart' in body) updateData.show_stock_chart = !!body.show_stock_chart;
 
     // Set updated_by
     updateData.updated_by = user.id;

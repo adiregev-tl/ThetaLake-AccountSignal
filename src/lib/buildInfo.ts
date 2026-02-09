@@ -1,7 +1,6 @@
-// This file is auto-generated during deployment
-// Do not edit manually
+// Build info is injected via next.config.ts env vars at build time
 
 export const buildInfo = {
-  commitHash: '8dd9dc0',
-  buildDate: '2026-02-05T19:09:13Z',
+  commitHash: process.env.NEXT_PUBLIC_BUILD_ID || 'dev',
+  buildDate: process.env.NEXT_PUBLIC_BUILD_DATE || new Date().toISOString(),
 };
