@@ -9,14 +9,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogOut, Settings, Shield, Info } from 'lucide-react';
+import { LogOut, Settings, Shield, Info, DollarSign } from 'lucide-react';
 
 interface UserMenuProps {
   onSettingsClick?: () => void;
   onAboutClick?: () => void;
+  onUsageClick?: () => void;
 }
 
-export function UserMenu({ onSettingsClick, onAboutClick }: UserMenuProps) {
+export function UserMenu({ onSettingsClick, onAboutClick, onUsageClick }: UserMenuProps) {
   const { profile, signOut, isAdmin } = useAuth();
 
   if (!profile) return null;
@@ -68,16 +69,25 @@ export function UserMenu({ onSettingsClick, onAboutClick }: UserMenuProps) {
         </div>
         <DropdownMenuSeparator />
         {onSettingsClick && (
-          <>
-            <DropdownMenuItem
-              onClick={onSettingsClick}
-              className="cursor-pointer"
-            >
-              <Settings className="w-4 h-4 mr-2" />
-              {isAdmin ? 'Settings' : 'Preferences'}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-          </>
+          <DropdownMenuItem
+            onClick={onSettingsClick}
+            className="cursor-pointer"
+          >
+            <Settings className="w-4 h-4 mr-2" />
+            {isAdmin ? 'Settings' : 'Preferences'}
+          </DropdownMenuItem>
+        )}
+        {isAdmin && onUsageClick && (
+          <DropdownMenuItem
+            onClick={onUsageClick}
+            className="cursor-pointer"
+          >
+            <DollarSign className="w-4 h-4 mr-2" />
+            Usage & Costs
+          </DropdownMenuItem>
+        )}
+        {(onSettingsClick || (isAdmin && onUsageClick)) && (
+          <DropdownMenuSeparator />
         )}
         {onAboutClick && (
           <DropdownMenuItem

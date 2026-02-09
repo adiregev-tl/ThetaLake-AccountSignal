@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ExternalLink, Eye, EyeOff, Check, Settings, Key, Search, Cpu, Loader2, X, CheckCircle2, XCircle, Users, Trash2, Shield, User, DollarSign, LineChart, Sun, Moon, Monitor, Sliders } from 'lucide-react';
+import { ExternalLink, Eye, EyeOff, Check, Settings, Key, Search, Cpu, Loader2, X, CheckCircle2, XCircle, Users, Trash2, Shield, User, LineChart, Sun, Moon, Monitor, Sliders } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import {
   Dialog,
@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ProviderName, PROVIDER_INFO } from '@/types/analysis';
 import { WebSearchProvider } from '@/lib/hooks/useApiKeys';
-import { UsageCosts } from '@/components/admin/UsageCosts';
+
 
 interface SaveSettings {
   provider: ProviderName;
@@ -68,7 +68,7 @@ export function ApiKeyModal({
   const [webKey, setWebKey] = useState('');
   const [showWebKey, setShowWebKey] = useState(false);
   const [webSearchProvider, setWebSearchProvider] = useState<WebSearchProvider>(initialWebSearchProvider);
-  const [activeTab, setActiveTab] = useState<'preferences' | 'provider' | 'websearch' | 'users' | 'usage'>('preferences');
+  const [activeTab, setActiveTab] = useState<'preferences' | 'provider' | 'websearch' | 'users'>('preferences');
   const [testingKey, setTestingKey] = useState(false);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -318,18 +318,6 @@ export function ApiKeyModal({
               >
                 <Users className="w-4 h-4" />
                 <span>Users</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('usage')}
-                className={`flex-1 flex items-center justify-center gap-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
-                  activeTab === 'usage'
-                    ? 'bg-zinc-700 text-white'
-                : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-                <DollarSign className="w-4 h-4" />
-                <span className="hidden sm:inline">Usage</span>
-                <span className="sm:hidden">$</span>
               </button>
             </>
           )}
@@ -948,35 +936,39 @@ export function ApiKeyModal({
           </div>
         )}
 
-        {/* Usage Tab */}
-        {activeTab === 'usage' && (
-          <div className="py-2">
-            <UsageCosts />
-          </div>
-        )}
-
         <div className="flex gap-3 justify-end pt-2 border-t border-zinc-800">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-800"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white btn-scale"
-          >
-            {saving ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                Saving...
-              </>
-            ) : (
-              'Save Settings'
-            )}
-          </Button>
+          {isAdmin ? (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-800"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={saving}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white btn-scale"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Settings'
+                )}
+              </Button>
+            </>
+          ) : (
+            <Button
+              onClick={() => onOpenChange(false)}
+              className="bg-zinc-700 hover:bg-zinc-600 text-white"
+            >
+              Close
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>

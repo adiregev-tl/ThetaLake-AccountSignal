@@ -30,6 +30,7 @@ interface HeaderProps {
   loading: boolean;
   onSettingsClick: () => void;
   onAboutClick: () => void;
+  onUsageClick?: () => void;
 }
 
 export function Header({
@@ -37,7 +38,8 @@ export function Header({
   onClearResults,
   loading,
   onSettingsClick,
-  onAboutClick
+  onAboutClick,
+  onUsageClick
 }: HeaderProps) {
   const { isAuthenticated, isAdmin, isLoading: authLoading } = useAuth();
   const [searchInput, setSearchInput] = useState('');
@@ -221,7 +223,7 @@ export function Header({
             <div className="flex sm:hidden items-center gap-2">
               {!authLoading && (
                 isAuthenticated ? (
-                  <UserMenu onSettingsClick={onSettingsClick} onAboutClick={onAboutClick} />
+                  <UserMenu onSettingsClick={onSettingsClick} onAboutClick={onAboutClick} onUsageClick={onUsageClick} />
                 ) : (
                   <LoginButton />
                 )
@@ -313,7 +315,7 @@ export function Header({
           <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
             {!authLoading && (
               isAuthenticated ? (
-                <UserMenu onSettingsClick={onSettingsClick} onAboutClick={onAboutClick} />
+                <UserMenu onSettingsClick={onSettingsClick} onAboutClick={onAboutClick} onUsageClick={onUsageClick} />
               ) : (
                 <LoginButton />
               )

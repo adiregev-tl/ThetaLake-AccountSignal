@@ -7,6 +7,7 @@ import { AnalysisDashboard } from '@/components/analysis/AnalysisDashboard';
 import { DashboardSkeleton } from '@/components/analysis/DashboardSkeleton';
 import { ApiKeyModal } from '@/components/auth/ApiKeyModal';
 import { AboutModal } from '@/components/AboutModal';
+import { UsageCostsWindow } from '@/components/admin/UsageCostsWindow';
 import { GuestBanner } from '@/components/auth/GuestBanner';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useApiKeys } from '@/lib/hooks/useApiKeys';
@@ -164,6 +165,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
+  const [showUsageWindow, setShowUsageWindow] = useState(false);
   const [activeTab, setActiveTab] = useState('search');
   const [webSearchUsed, setWebSearchUsed] = useState(false);
   const [webSearchError, setWebSearchError] = useState<string | null>(null);
@@ -448,6 +450,7 @@ export default function Home() {
         loading={loading}
         onSettingsClick={handleSettingsClick}
         onAboutClick={() => setShowAboutModal(true)}
+        onUsageClick={() => setShowUsageWindow(true)}
       />
 
       <main className="max-w-7xl mx-auto px-4 py-6">
@@ -767,6 +770,14 @@ export default function Home() {
           tavilyApiKey={serverSettings.tavily_api_key || undefined}
           webSearchApiKey={serverSettings.websearchapi_key || undefined}
           onSaveAll={handleSaveAllSettings}
+        />
+      )}
+
+      {/* Usage & Costs Window */}
+      {isAdmin && (
+        <UsageCostsWindow
+          open={showUsageWindow}
+          onOpenChange={setShowUsageWindow}
         />
       )}
 
