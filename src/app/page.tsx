@@ -753,7 +753,7 @@ export default function Home() {
 
       <footer className="border-t border-border mt-12">
         <div className="max-w-7xl mx-auto px-4 py-6 text-center text-muted-foreground text-sm">
-          MarketPulse - Corporate Intelligence Platform powered by AI
+          Theta Lake AccountSignal - Corporate Intelligence Platform powered by AI
         </div>
       </footer>
 

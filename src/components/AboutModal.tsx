@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Info, Github, ExternalLink, FileText, Cpu } from 'lucide-react';
+import { Info, FileText, Cpu } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -38,7 +38,7 @@ export function AboutModal({ open, onOpenChange, providerName, modelName }: Abou
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
             <Info className="w-5 h-5 text-emerald-400" />
-            About MarketPulse
+            About AccountSignal
           </DialogTitle>
         </DialogHeader>
 
@@ -46,13 +46,14 @@ export function AboutModal({ open, onOpenChange, providerName, modelName }: Abou
           {/* App Description */}
           <div className="space-y-3">
             <p className="text-zinc-300 text-sm leading-relaxed">
-              MarketPulse is an AI-powered corporate intelligence platform that provides
-              comprehensive company analysis including financials, news, competitive
-              landscape, and market positioning.
+              Theta Lake AccountSignal is an AI-powered corporate intelligence platform
+              built for account teams and go-to-market professionals. Search any company
+              to get a comprehensive 360-degree view covering financials, recent news,
+              competitive positioning, leadership, and M&amp;A activity.
             </p>
             <p className="text-zinc-400 text-sm leading-relaxed">
-              Powered by advanced AI models from OpenAI, Anthropic, Google, and Perplexity
-              to deliver accurate, real-time business insights.
+              Powered by multiple AI providers (OpenAI, Anthropic, Google, Perplexity)
+              with optional web search augmentation for real-time data.
             </p>
           </div>
 
@@ -62,23 +63,27 @@ export function AboutModal({ open, onOpenChange, providerName, modelName }: Abou
             <ul className="text-zinc-400 text-sm space-y-1">
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-                Real-time stock data and financials
+                AI-generated executive summaries and sentiment
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-                AI-generated executive summaries
+                Real-time stock data and financial overview
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-                Competitive landscape analysis
+                Competitive landscape and market positioning
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-                Leadership changes tracking
+                Leadership changes and organizational signals
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-                M&A activity monitoring
+                M&amp;A activity and strategic moves
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
+                Shared analysis cache across the team
               </li>
             </ul>
           </div>
@@ -121,23 +126,9 @@ export function AboutModal({ open, onOpenChange, providerName, modelName }: Abou
             </div>
           </div>
 
-          {/* Links */}
-          <div className="flex items-center justify-center gap-4 pt-2">
-            <a
-              href="https://github.com/regevadi-cmd/MarketPulse"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors text-sm"
-            >
-              <Github className="w-4 h-4" />
-              GitHub
-              <ExternalLink className="w-3 h-3" />
-            </a>
-          </div>
-
           {/* Copyright */}
           <p className="text-center text-zinc-500 text-xs">
-            &copy; {new Date().getFullYear()} MarketPulse. All rights reserved.
+            &copy; {new Date().getFullYear()} Theta Lake. All rights reserved.
           </p>
         </div>
       </DialogContent>

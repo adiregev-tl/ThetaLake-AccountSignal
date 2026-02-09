@@ -214,8 +214,8 @@ export function Header({
                 <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-lg sm:text-xl font-bold text-foreground">MarketPulse</h1>
-                <p className="text-xs text-muted-foreground hidden sm:block">Corporate Intelligence</p>
+                <h1 className="text-lg sm:text-xl font-bold text-foreground">AccountSignal</h1>
+                <p className="text-xs text-muted-foreground hidden sm:block">Theta Lake Corporate Intelligence</p>
               </div>
             </div>
 

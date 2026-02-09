@@ -327,7 +327,7 @@ export function ApiKeyModal({
         {activeTab === 'preferences' && mounted && (
           <div className="space-y-4 py-2">
             <p className="text-sm text-zinc-400">
-              Personalize your MarketPulse experience. These settings are saved to this browser.
+              Personalize your AccountSignal experience. These settings are saved to this browser.
             </p>
 
             {/* Theme Selection */}

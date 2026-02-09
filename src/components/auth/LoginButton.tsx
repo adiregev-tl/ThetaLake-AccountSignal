@@ -59,7 +59,7 @@ export function LoginButton() {
       <DialogContent className="bg-zinc-900 border-zinc-800 sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-white">
-            {emailSent ? 'Check your email' : 'Sign in to MarketPulse'}
+            {emailSent ? 'Check your email' : 'Sign in to AccountSignal'}
           </DialogTitle>
           <DialogDescription className="text-zinc-400">
             {emailSent
