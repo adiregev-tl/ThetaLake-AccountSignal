@@ -38,20 +38,22 @@ export async function extractCompetitorMentions(
     .map((r, i) => `[${i + 1}] Title: ${r.title} | URL: ${r.url} | Content: ${r.content.substring(0, 300)}`)
     .join('\n');
 
-  const prompt = `Extract competitor business relationships from these search results.
+  const prompt = `Extract mentions of compliance/archiving vendors publishing content about a company.
 
-COMPANY: ${companyName}
-COMPETITORS TO LOOK FOR: ${competitors.join(', ')}
+COMPANY BEING ANALYZED: ${companyName}
+COMPLIANCE VENDORS TO LOOK FOR: ${competitors.join(', ')}
+
+These vendors are competitors of Theta Lake. We want to find content they have published that mentions "${companyName}" — such as case studies featuring "${companyName}" as a customer, press releases about partnerships, integration announcements, or any business relationship.
 
 SEARCH RESULTS:
 ${resultsList}
 
 RULES:
-- Only extract REAL business relationships (customer, partner, integration, case_study, press_release, comparison)
+- Only extract results where a compliance vendor has published content about "${companyName}"
 - The URL field MUST be copied exactly from one of the results above
-- Both the company name AND the competitor must appear in the content
+- Both "${companyName}" AND the vendor name must appear in the content
 - Provide a 1-2 sentence summary citing specific evidence from the content
-- If no real business relationships are found, return an empty array
+- If no real mentions are found, return an empty array
 
 Return ONLY a JSON array (or empty array if none found):
 [{"competitorName":"...","mentionType":"customer|partner|integration|case_study|press_release|comparison|other","title":"...","url":"...","summary":"..."}]`;

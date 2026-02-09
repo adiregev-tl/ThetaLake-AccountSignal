@@ -313,7 +313,8 @@ export async function POST(request: NextRequest) {
     const analysis = await aiProvider.analyzeCompany(companyName.trim());
     const durationMs = Date.now() - startTime;
 
-    // Phase 2: Consolidated competitor search using AI-discovered + hardcoded competitors
+    // Phase 2: Search for Theta Lake's competitors that have published content about this company
+    // Merge hardcoded compliance vendors with any additional vendors discovered by AI
     if (shouldUseWebSearch) {
       try {
         const allCompetitors = [...new Set([...HARDCODED_COMPETITORS, ...(analysis.discoveredCompetitors || [])])];

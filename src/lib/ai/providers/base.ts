@@ -85,10 +85,10 @@ IMPORTANT: Only include case studies HOSTED BY other companies, NOT case studies
 Format: Vendor: Title | URL | Summary
 [/CASE_STUDIES]
 
-[COMPETITORS]
-List the top 5-8 direct competitors of ${companyName} in their primary market.
-These must be real, named companies. One name per line.
-[/COMPETITORS]
+[COMPLIANCE_VENDORS]
+Based on what you know about ${companyName}, list any compliance, archiving, e-discovery, or communications surveillance technology vendors (beyond Smarsh, Global Relay, NICE, Verint, Arctera, Veritas, Proofpoint, Shield, Behavox, Digital Reasoning, Mimecast, ZL Technologies) that ${companyName} may use, partner with, or that have published content about ${companyName}.
+These must be real, named companies. One name per line. If none, leave empty.
+[/COMPLIANCE_VENDORS]
 
 [COMPETITOR_MENTIONS]
 Search for TECHNOLOGY-RELATED mentions of "${companyName}" involving these compliance/archiving competitors: Smarsh, Global Relay, NICE, Verint, Arctera, Veritas, Proofpoint, Shield, Behavox, Digital Reasoning, Mimecast, ZL Technologies.

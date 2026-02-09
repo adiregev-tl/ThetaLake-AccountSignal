@@ -436,7 +436,7 @@ export function parseTaggedResponse(text: string): AnalysisResult {
     techNews: parseListItems(parseTagContent(text, 'TECH_NEWS')),
     caseStudies: parseListItems(parseTagContent(text, 'CASE_STUDIES')),
     competitorMentions: parseCompetitorMentions(parseTagContent(text, 'COMPETITOR_MENTIONS')),
-    discoveredCompetitors: parseCompetitorList(parseTagContent(text, 'COMPETITORS')),
+    discoveredCompetitors: parseCompetitorList(parseTagContent(text, 'COMPLIANCE_VENDORS')),
     leadershipChanges: parseLeadershipChanges(parseTagContent(text, 'LEADERSHIP_CHANGES')),
     maActivity: parseMAActivity(parseTagContent(text, 'MA_ACTIVITY')),
     regulatoryLandscape: parseRegulatoryLandscape(parseTagContent(text, 'REGULATORY_LANDSCAPE')),

@@ -14,22 +14,22 @@ export const releaseNotes: ReleaseNote[] = [
     date: '2026-02-09',
     highlights: [
       'Redesigned competitor mentions — zero hallucinated URLs',
-      'Dynamic competitor discovery for any company',
+      'AI discovers additional compliance vendors dynamically',
       'API calls reduced from 24+ to ~4-5',
     ],
     changes: [
       {
         category: 'Added',
         items: [
-          'AI-powered competitor extraction — constrained to real search result URLs only',
-          'Dynamic competitor discovery via AI analysis (works for any industry)',
+          'AI-powered extraction — constrained to real search result URLs only',
+          'AI discovers additional compliance/archiving vendors beyond the hardcoded list',
           'Consolidated search: 2-3 broad queries replace 24 narrow ones',
         ],
       },
       {
         category: 'Changed',
         items: [
-          'Competitor mentions now show which competitors were analyzed',
+          'Competitor mentions now show full list of compliance vendors searched',
           'UI no longer shows "Unverified" badges (all results verified by design)',
         ],
       },
