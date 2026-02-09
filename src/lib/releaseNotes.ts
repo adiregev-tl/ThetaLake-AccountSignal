@@ -10,6 +10,92 @@ export interface ReleaseNote {
 
 export const releaseNotes: ReleaseNote[] = [
   {
+    version: '1.4.0',
+    date: '2026-02-09',
+    highlights: [
+      'Redesigned competitor mentions — zero hallucinated URLs',
+      'Dynamic competitor discovery for any company',
+      'API calls reduced from 24+ to ~4-5',
+    ],
+    changes: [
+      {
+        category: 'Added',
+        items: [
+          'AI-powered competitor extraction — constrained to real search result URLs only',
+          'Dynamic competitor discovery via AI analysis (works for any industry)',
+          'Consolidated search: 2-3 broad queries replace 24 narrow ones',
+        ],
+      },
+      {
+        category: 'Changed',
+        items: [
+          'Competitor mentions now show which competitors were analyzed',
+          'UI no longer shows "Unverified" badges (all results verified by design)',
+        ],
+      },
+      {
+        category: 'Removed',
+        items: [
+          'Deprecated heuristic anti-hallucination system for competitor mentions',
+          'Removed hardcoded compliance-industry competitor list from search providers',
+        ],
+      },
+    ],
+  },
+  {
+    version: '1.3.1',
+    date: '2026-02-09',
+    highlights: [
+      'Rebranded to Theta Lake AccountSignal',
+      'Admin role toggle and usage tracking improvements',
+    ],
+    changes: [
+      {
+        category: 'Changed',
+        items: [
+          'Rebranded from MarketPulse to Theta Lake AccountSignal',
+          'Theme-aware styling for Usage & Costs window',
+        ],
+      },
+      {
+        category: 'Fixed',
+        items: [
+          'Settings modal light mode text visibility',
+          'Avg cost per search visibility',
+          'Role update error handling',
+        ],
+      },
+    ],
+  },
+  {
+    version: '1.3.0',
+    date: '2026-02-08',
+    highlights: [
+      'Regulatory events with multi-source deduplication',
+      'Leadership changes from web search',
+      'Investor presentation discovery',
+    ],
+    changes: [
+      {
+        category: 'Added',
+        items: [
+          'Regulatory events search with SEC, FINRA, DOJ, FCA sources',
+          'Leadership changes parsing from news articles',
+          'Investor presentation search and featured display',
+          'Usage & Costs floating panel',
+          'Admin user management',
+        ],
+      },
+      {
+        category: 'Changed',
+        items: [
+          'Regulatory events deduplicated across multiple sources',
+          'Improved investor documents section with presentation as featured item',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.2.2',
     date: '2026-02-05',
     highlights: [
