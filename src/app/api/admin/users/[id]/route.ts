@@ -2,6 +2,69 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: userIdToUpdate } = await params;
+    const supabase = await createClient();
+
+    // Get current user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Can't change your own role
+    if (user.id === userIdToUpdate) {
+      return NextResponse.json({ error: 'Cannot change your own role' }, { status: 400 });
+    }
+
+    // Check if current user is admin
+    const { data: currentProfile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single() as { data: { role: string } | null };
+
+    if (!currentProfile || currentProfile.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+    }
+
+    // Validate request body
+    const body = await request.json();
+    const { role } = body;
+
+    if (role !== 'admin' && role !== 'user') {
+      return NextResponse.json({ error: 'Invalid role. Must be "admin" or "user"' }, { status: 400 });
+    }
+
+    // Update role in profiles table
+    const { data: updatedProfile, error: updateError } = await (supabase as any)
+      .from('profiles')
+      .update({ role })
+      .eq('id', userIdToUpdate)
+      .select('email, role')
+      .single() as { data: { email: string; role: string } | null; error: any };
+
+    if (updateError) {
+      console.error('Error updating role:', updateError);
+      return NextResponse.json({ error: 'Failed to update user role' }, { status: 500 });
+    }
+
+    if (!updatedProfile) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, message: `User ${updatedProfile.email} role updated to ${role}` });
+  } catch (error) {
+    console.error('Update role API error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

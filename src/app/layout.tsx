@@ -18,6 +18,9 @@ export const metadata: Metadata = {
   title: "Theta Lake AccountSignal - Corporate Intelligence Platform",
   description: "AI-powered corporate intelligence platform for financial analysts, researchers, and M&A professionals. Get comprehensive company analysis with real-time data.",
   keywords: ["corporate intelligence", "company analysis", "financial analysis", "M&A", "AI research", "account signal"],
+  icons: {
+    icon: '/icon.svg',
+  },
 };
 
 export default function RootLayout({

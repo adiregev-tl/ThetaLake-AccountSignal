@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ExternalLink, Eye, EyeOff, Check, Settings, Key, Search, Cpu, Loader2, X, CheckCircle2, XCircle, Users, Trash2, Shield, User, LineChart, Sun, Moon, Monitor, Sliders } from 'lucide-react';
+import { ExternalLink, Eye, EyeOff, Check, Settings, Key, Search, Cpu, Loader2, X, CheckCircle2, XCircle, Users, Trash2, Shield, ShieldOff, User, LineChart, Sun, Moon, Monitor, Sliders } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import {
   Dialog,
   DialogContent,
@@ -59,6 +60,7 @@ export function ApiKeyModal({
   onSaveAll
 }: ApiKeyModalProps) {
   const { theme, setTheme } = useTheme();
+  const { user: currentUser } = useAuth();
   const [selectedProvider, setSelectedProvider] = useState<ProviderName>(initialProvider);
   const [selectedModel, setSelectedModel] = useState(initialModel);
   const [apiKey, setApiKey] = useState('');
@@ -73,6 +75,7 @@ export function ApiKeyModal({
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [togglingRoleUserId, setTogglingRoleUserId] = useState<string | null>(null);
   const [usersError, setUsersError] = useState<string | null>(null);
   const [usersWarning, setUsersWarning] = useState<string | null>(null);
   const [keyTestResult, setKeyTestResult] = useState<{ valid: boolean; error?: string } | null>(null);
@@ -172,6 +175,35 @@ export function ApiKeyModal({
       alert('Failed to delete user');
     } finally {
       setDeletingUserId(null);
+    }
+  };
+
+  const toggleRole = async (userId: string, currentRole: 'admin' | 'user') => {
+    const newRole = currentRole === 'admin' ? 'user' : 'admin';
+    const action = newRole === 'admin' ? 'promote' : 'demote';
+    if (!confirm(`Are you sure you want to ${action} this user to ${newRole}?`)) {
+      return;
+    }
+
+    setTogglingRoleUserId(userId);
+    try {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: newRole })
+      });
+
+      if (response.ok) {
+        setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Failed to update user role');
+      }
+    } catch (err) {
+      console.error('Failed to toggle role:', err);
+      alert('Failed to update user role');
+    } finally {
+      setTogglingRoleUserId(null);
     }
   };
 
@@ -910,21 +942,47 @@ export function ApiKeyModal({
                         </div>
                       </div>
                     </div>
-                    {user.role !== 'admin' && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteUser(user.id)}
-                        disabled={deletingUserId === user.id}
-                        className="text-zinc-500 hover:text-red-400 hover:bg-red-500/10 flex-shrink-0 ml-2"
-                      >
-                        {deletingUserId === user.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
-                        )}
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                      {/* Role toggle - hidden for current user */}
+                      {currentUser?.id !== user.id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleRole(user.id, user.role)}
+                          disabled={togglingRoleUserId === user.id}
+                          className={`${
+                            user.role === 'admin'
+                              ? 'text-amber-400 hover:text-amber-300 hover:bg-amber-500/10'
+                              : 'text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10'
+                          }`}
+                          title={user.role === 'admin' ? 'Demote to user' : 'Promote to admin'}
+                        >
+                          {togglingRoleUserId === user.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : user.role === 'admin' ? (
+                            <ShieldOff className="w-4 h-4" />
+                          ) : (
+                            <Shield className="w-4 h-4" />
+                          )}
+                        </Button>
+                      )}
+                      {/* Delete - hidden for admins */}
+                      {user.role !== 'admin' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteUser(user.id)}
+                          disabled={deletingUserId === user.id}
+                          className="text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
+                        >
+                          {deletingUserId === user.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

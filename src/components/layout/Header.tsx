@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { TrendingUp, Search, Loader2 } from 'lucide-react';
+import { Signal, Search, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/contexts/AuthContext';
@@ -211,7 +211,7 @@ export function Header({
             {/* Logo */}
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
-                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                <Signal className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div>
                 <h1 className="text-lg sm:text-xl font-bold text-foreground">AccountSignal</h1>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { DollarSign, TrendingUp, AlertTriangle, RefreshCw, Users, Cpu, Search, Clock } from 'lucide-react';
+import { DollarSign, TrendingUp, AlertTriangle, RefreshCw, Users, Cpu, Search, Clock, Divide } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatCost } from '@/lib/config/pricing';
@@ -340,6 +340,10 @@ function CostCard({ title, data }: { title: string; data: UsagePeriod }) {
         <span className="flex items-center gap-0.5">
           <Search className="w-2.5 h-2.5 flex-shrink-0" />
           {formatCost(data.searchCost)}
+        </span>
+        <span className="flex items-center gap-0.5">
+          <Divide className="w-2.5 h-2.5 flex-shrink-0" />
+          {formatCost(data.totalRequests > 0 ? data.totalCost / data.totalRequests : 0)}/search
         </span>
       </div>
     </div>
