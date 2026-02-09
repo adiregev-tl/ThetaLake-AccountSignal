@@ -3,6 +3,7 @@
 import { AlertTriangle, ExternalLink, DollarSign, Calendar, Building2, Newspaper } from 'lucide-react';
 import { SectionCard } from '../SectionCard';
 import { RegulatoryEventItem } from '@/types/analysis';
+import { isValidHttpUrl } from '@/lib/utils';
 
 interface RegulatoryEventsProps {
   events: RegulatoryEventItem[];
@@ -36,7 +37,7 @@ export function RegulatoryEvents({ events }: RegulatoryEventsProps) {
         {events.length > 0 ? (
           events.map((event, i) => {
             const typeInfo = getEventTypeInfo(event.eventType);
-            const hasUrl = event.url && event.url.startsWith('http');
+            const hasUrl = event.url && isValidHttpUrl(event.url);
 
             const content = (
               <>
@@ -79,7 +80,7 @@ export function RegulatoryEvents({ events }: RegulatoryEventsProps) {
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {event.sources.map((source, j) => (
+                      {event.sources.filter(source => isValidHttpUrl(source.url)).map((source, j) => (
                         <a
                           key={j}
                           href={source.url}

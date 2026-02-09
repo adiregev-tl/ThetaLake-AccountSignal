@@ -1,17 +1,14 @@
 'use client';
 
-import { Search, ExternalLink, Building2, Handshake, Scale, FileText, Newspaper, MoreHorizontal, Calendar, Plug, AlertTriangle } from 'lucide-react';
+import { Search, ExternalLink, Building2, Handshake, Scale, FileText, Newspaper, MoreHorizontal, Calendar, Plug } from 'lucide-react';
 import { SectionCard } from '../SectionCard';
 import { CompetitorMentionItem } from '@/types/analysis';
+import { isValidHttpUrl } from '@/lib/utils';
 
 interface CompetitorMentionsProps {
   mentions: CompetitorMentionItem[];
+  discoveredCompetitors?: string[];
 }
-
-const COMPETITOR_LIST = [
-  'Smarsh', 'Global Relay', 'NICE', 'Verint', 'Arctera', 'Veritas',
-  'Proofpoint', 'Shield', 'Behavox', 'Digital Reasoning', 'Mimecast', 'ZL Technologies'
-];
 
 const mentionTypeIcons: Record<string, typeof Building2> = {
   customer: Building2,
@@ -43,7 +40,7 @@ const mentionTypeColors: Record<string, string> = {
   other: 'text-muted-foreground bg-muted/50',
 };
 
-export function CompetitorMentions({ mentions }: CompetitorMentionsProps) {
+export function CompetitorMentions({ mentions, discoveredCompetitors }: CompetitorMentionsProps) {
   // Group mentions by competitor
   const groupedMentions = mentions.reduce((acc, mention) => {
     if (!acc[mention.competitorName]) {
@@ -58,9 +55,11 @@ export function CompetitorMentions({ mentions }: CompetitorMentionsProps) {
   return (
     <SectionCard title="Competitor Mentions" icon={Search} color="amber">
       <div className="space-y-4">
-        <p className="text-muted-foreground text-xs">
-          Mentions found across: {COMPETITOR_LIST.join(', ')}
-        </p>
+        {discoveredCompetitors && discoveredCompetitors.length > 0 && (
+          <p className="text-muted-foreground text-xs">
+            Competitors analyzed: {discoveredCompetitors.join(', ')}
+          </p>
+        )}
 
         {hasAnyMentions ? (
           <div className="space-y-4">
@@ -76,15 +75,10 @@ export function CompetitorMentions({ mentions }: CompetitorMentionsProps) {
                     const Icon = mentionTypeIcons[mention.mentionType] || MoreHorizontal;
                     const colorClass = mentionTypeColors[mention.mentionType] || mentionTypeColors.other;
                     const label = mentionTypeLabels[mention.mentionType] || 'Mention';
+                    const hasValidUrl = isValidHttpUrl(mention.url);
 
-                    return (
-                      <a
-                        key={i}
-                        href={mention.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 p-2 sm:p-3 bg-card/50 dark:bg-muted/50 rounded-lg hover:bg-accent/50 active:bg-muted transition-colors"
-                      >
+                    const content = (
+                      <>
                         <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium w-fit ${colorClass}`}>
                           <Icon className="w-3 h-3" />
                           {label}
@@ -94,29 +88,44 @@ export function CompetitorMentions({ mentions }: CompetitorMentionsProps) {
                             <span className="text-foreground text-sm font-medium line-clamp-2 sm:line-clamp-1 group-hover:text-foreground/80 transition-colors">
                               {mention.title}
                             </span>
-                            <ExternalLink className="w-3 h-3 text-muted-foreground flex-shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
+                            {hasValidUrl && (
+                              <ExternalLink className="w-3 h-3 text-muted-foreground flex-shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
+                            )}
                           </div>
                           {mention.summary && (
                             <p className="text-muted-foreground text-xs mt-1 line-clamp-2">
                               {mention.summary}
                             </p>
                           )}
-                          <div className="flex items-center gap-2 mt-1">
-                            {mention.date && (
+                          {mention.date && (
+                            <div className="flex items-center gap-2 mt-1">
                               <span className="flex items-center gap-1 text-muted-foreground text-xs">
                                 <Calendar className="w-3 h-3" />
                                 {mention.date}
                               </span>
-                            )}
-                            {mention.unverified && (
-                              <span className="flex items-center gap-1 text-amber-500 text-xs">
-                                <AlertTriangle className="w-3 h-3" />
-                                Unverified
-                              </span>
-                            )}
-                          </div>
+                            </div>
+                          )}
                         </div>
+                      </>
+                    );
+
+                    return hasValidUrl ? (
+                      <a
+                        key={i}
+                        href={mention.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 p-2 sm:p-3 bg-card/50 dark:bg-muted/50 rounded-lg hover:bg-accent/50 active:bg-muted transition-colors"
+                      >
+                        {content}
                       </a>
+                    ) : (
+                      <div
+                        key={i}
+                        className="group flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 p-2 sm:p-3 bg-card/50 dark:bg-muted/50 rounded-lg"
+                      >
+                        {content}
+                      </div>
                     );
                   })}
                 </div>
@@ -124,7 +133,7 @@ export function CompetitorMentions({ mentions }: CompetitorMentionsProps) {
             ))}
           </div>
         ) : (
-          <p className="text-muted-foreground text-sm">No competitor mentions found</p>
+          <p className="text-muted-foreground text-sm">No mentions found across these competitors</p>
         )}
       </div>
     </SectionCard>

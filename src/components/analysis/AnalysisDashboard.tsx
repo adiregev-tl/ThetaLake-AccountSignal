@@ -329,7 +329,7 @@ export function AnalysisDashboard({
 
         {/* Row 5: Competitor Mentions & Investor Docs - 50/50 Split */}
         <div className="lg:col-span-2 xl:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <CompetitorMentions mentions={data.competitorMentions || []} />
+          <CompetitorMentions mentions={data.competitorMentions || []} discoveredCompetitors={data.discoveredCompetitors} />
           <InvestorDocuments documents={data.investorDocs} companyInfo={companyInfo} />
         </div>
 

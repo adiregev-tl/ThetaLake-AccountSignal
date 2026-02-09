@@ -118,411 +118,54 @@ export async function tavilySearchInvestorPresentation(
   return response.results;
 }
 
-// Competitor companies to search for mentions
-const COMPETITOR_DOMAINS = [
-  'smarsh.com',
-  'globalrelay.com',
-  'nice.com',
-  'verint.com',
-  'arctera.io',
-  'veritas.com',
-  'proofpoint.com',
-  'shieldfc.com',
-  'behavox.com',
-  'digitalreasoning.com',
-  'mimecast.com',
-  'zlti.com'
-];
-
-const COMPETITOR_NAMES: Record<string, string> = {
-  'smarsh.com': 'Smarsh',
-  'globalrelay.com': 'Global Relay',
-  'nice.com': 'NICE',
-  'verint.com': 'Verint',
-  'arctera.io': 'Arctera',
-  'veritas.com': 'Veritas',
-  'proofpoint.com': 'Proofpoint',
-  'shieldfc.com': 'Shield',
-  'behavox.com': 'Behavox',
-  'digitalreasoning.com': 'Digital Reasoning',
-  'mimecast.com': 'Mimecast',
-  'zlti.com': 'ZL Technologies'
-};
-
-export interface CompetitorMention {
-  competitorName: string;
-  title: string;
-  url: string;
-  summary: string;
-  mentionType: 'customer' | 'partner' | 'case_study' | 'press_release' | 'integration' | 'other';
-  confidence?: number;    // 0-100 confidence score from anti-hallucination system
-  unverified?: boolean;   // true if 60-74 confidence (show warning badge)
-}
-
-function inferMentionType(url: string, content: string): CompetitorMention['mentionType'] {
-  const urlLower = url.toLowerCase();
-  const contentLower = content.toLowerCase();
-
-  if (urlLower.includes('case-study') || urlLower.includes('casestudy') || urlLower.includes('customer-story') || contentLower.includes('case study')) {
-    return 'case_study';
-  }
-  if (urlLower.includes('integration') || urlLower.includes('connector') || contentLower.includes('integration') || contentLower.includes('integrates')) {
-    return 'integration' as CompetitorMention['mentionType'];
-  }
-  if (urlLower.includes('customer') || urlLower.includes('client') || contentLower.includes('customer')) {
-    return 'customer';
-  }
-  if (urlLower.includes('partner') || contentLower.includes('partner')) {
-    return 'partner';
-  }
-  if (urlLower.includes('press') || urlLower.includes('news') || urlLower.includes('blog')) {
-    return 'press_release';
-  }
-  return 'other';
-}
-
-// Check if content describes a real business relationship (deployment, partnership, customer)
-function isBusinessRelationship(content: string, title: string, companyName: string): boolean {
-  const text = (content + ' ' + title).toLowerCase();
-  const companyLower = companyName.toLowerCase();
-
-  // STRONG relationship indicators - company must be subject/object of these actions
-  const relationshipPatterns = [
-    // Deployment/usage patterns
-    `${companyLower} deploys`, `${companyLower} uses`, `${companyLower} chose`,
-    `${companyLower} selected`, `${companyLower} implements`, `${companyLower} adopted`,
-    `deployed by ${companyLower}`, `used by ${companyLower}`, `chosen by ${companyLower}`,
-    `selected by ${companyLower}`, `implemented by ${companyLower}`,
-    // Partnership patterns
-    `${companyLower} partners`, `${companyLower} and`, `partner with ${companyLower}`,
-    `partnership with ${companyLower}`, `alliance with ${companyLower}`,
-    // Customer patterns
-    `${companyLower} customer`, `customer ${companyLower}`, `client ${companyLower}`,
-    // Case study patterns
-    'case study', 'success story', 'customer story',
-    // Integration patterns
-    `${companyLower} integration`, `integrates with ${companyLower}`,
-    // Announcement patterns
-    'announces', 'announcement', 'press release', 'jointly'
-  ];
-
-  // Check if any relationship pattern exists
-  const hasRelationshipPattern = relationshipPatterns.some(pattern => text.includes(pattern));
-
-  // EXCLUSION patterns - these indicate it's NOT a real business relationship
-  const exclusionPatterns = [
-    // People/bios
-    'executive', 'leadership', 'team member', 'biography', 'profile',
-    'leads the', 'oversees', 'responsible for', 'experience at',
-    'previously at', 'former', 'joined from', 'worked at', 'career',
-    'ceo', 'cfo', 'cto', 'coo', 'vp of', 'evp', 'svp', 'director of',
-    'chief', 'president', 'founder', 'co-founder',
-    // Investment/funding (not technology relationship)
-    'funded by', 'invested', 'portfolio company', 'venture', 'capital',
-    'acquisition of', 'acquired by', 'merger', 'ipo', 'valuation',
-    // Events/speaking
-    'speaker', 'keynote', 'panel', 'webinar', 'conference', 'event',
-    'presentation', 'fireside chat',
-    // Generic mentions
-    'such as', 'including', 'like', 'similar to', 'compared to',
-    'competitor', 'alternative', 'vs', 'versus'
-  ];
-
-  const hasExclusionPattern = exclusionPatterns.some(pattern => text.includes(pattern));
-
-  return hasRelationshipPattern && !hasExclusionPattern;
-}
-
-// Create a concise technology-focused summary
-function createTechSummary(content: string, companyName: string): string {
-  const contentLower = content.toLowerCase();
-  const companyLower = companyName.toLowerCase();
-
-  // Try to extract the most relevant sentence mentioning the company
-  const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 20);
-  const relevantSentence = sentences.find(s =>
-    s.toLowerCase().includes(companyLower) &&
-    (s.toLowerCase().includes('partner') ||
-     s.toLowerCase().includes('customer') ||
-     s.toLowerCase().includes('integration') ||
-     s.toLowerCase().includes('deploy') ||
-     s.toLowerCase().includes('use') ||
-     s.toLowerCase().includes('solution'))
-  );
-
-  if (relevantSentence) {
-    return relevantSentence.trim().substring(0, 150) + (relevantSentence.length > 150 ? '...' : '');
-  }
-
-  // Fallback to first 150 chars
-  return content.substring(0, 150).trim() + (content.length > 150 ? '...' : '');
-}
-
-// Validate that URL actually belongs to the expected competitor domain
-function isValidCompetitorUrl(url: string, expectedDomain: string): boolean {
-  try {
-    const urlObj = new URL(url);
-    const hostname = urlObj.hostname.toLowerCase();
-    const domainLower = expectedDomain.toLowerCase();
-
-    // Check if hostname matches or is a subdomain of the expected domain
-    return hostname === domainLower ||
-           hostname.endsWith('.' + domainLower) ||
-           hostname === 'www.' + domainLower;
-  } catch {
-    return false;
-  }
-}
-
-// Check if URL is a generic listing/index page (likely hallucinated)
-function isGenericListingPage(url: string): boolean {
-  try {
-    const path = new URL(url).pathname.toLowerCase();
-
-    // Reject URLs that end with generic listing paths
-    const genericPatterns = [
-      /\/customers\/?$/,
-      /\/clients\/?$/,
-      /\/case-studies\/?$/,
-      /\/case-study\/?$/,
-      /\/resources\/?$/,
-      /\/resources\/case-studies\/?$/,
-      /\/success-stories\/?$/,
-      /\/testimonials\/?$/,
-      /\/partners\/?$/,
-      /\/integrations\/?$/,
-      /\/solutions\/?$/,
-      /\/industries\/?$/,
-      /\/news\/?$/,
-      /\/press\/?$/,
-      /\/blog\/?$/,
-      /\/us\/resources\/case-studies\/?$/, // Proofpoint specific
-    ];
-
-    // Check if URL matches any generic pattern
-    for (const pattern of genericPatterns) {
-      if (pattern.test(path)) {
-        return true;
-      }
-    }
-
-    // Also reject very short paths (likely index pages)
-    const pathParts = path.split('/').filter(p => p.length > 0);
-    if (pathParts.length <= 1) {
-      return true;
-    }
-
-    return false;
-  } catch {
-    return true; // Invalid URL, reject
-  }
-}
-
-// Validate URL actually exists, returns 200, and contains the company name
-async function validateUrlAndContent(url: string, companyName: string): Promise<boolean> {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000); // 8 second timeout
-
-    // Use GET instead of HEAD - many servers don't handle HEAD properly
-    const response = await fetch(url, {
-      method: 'GET',
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml',
-      }
-    });
-
-    clearTimeout(timeout);
-
-    // Must be 200 OK (not redirect, not error)
-    if (response.status !== 200) {
-      console.warn(`URL returned status ${response.status}: ${url}`);
-      return false;
-    }
-
-    // Check content type is HTML
-    const contentType = response.headers.get('content-type') || '';
-    if (!contentType.includes('text/html')) {
-      console.warn(`URL is not HTML (${contentType}): ${url}`);
-      return false;
-    }
-
-    // Get page content and verify company name appears
-    const text = await response.text();
-    const companyLower = companyName.toLowerCase();
-    const textLower = text.toLowerCase();
-
-    // Company name must appear in the actual page content
-    if (!textLower.includes(companyLower)) {
-      console.warn(`Company name "${companyName}" not found in page content: ${url}`);
-      return false;
-    }
-
-    // Check for soft 404 indicators
-    const soft404Indicators = [
-      'page not found',
-      'page doesn\'t exist',
-      'page does not exist',
-      '404',
-      'not found',
-      'no longer available',
-      'has been removed',
-      'content unavailable'
-    ];
-
-    for (const indicator of soft404Indicators) {
-      if (textLower.includes(indicator)) {
-        console.warn(`Soft 404 detected (${indicator}): ${url}`);
-        return false;
-      }
-    }
-
-    return true;
-  } catch (err) {
-    console.warn(`Failed to validate URL: ${url}`, err);
-    return false;
-  }
-}
-
-// Check if content is actually grounded (not hallucinated)
-function isGroundedContent(content: string, title: string, companyName: string): boolean {
-  const companyLower = companyName.toLowerCase();
-  const contentLower = content.toLowerCase();
-  const titleLower = title.toLowerCase();
-
-  // Company name must appear in the actual content (not just claimed)
-  const companyInContent = contentLower.includes(companyLower);
-  const companyInTitle = titleLower.includes(companyLower);
-
-  if (!companyInContent && !companyInTitle) {
-    return false;
-  }
-
-  // Content must be substantial (not just a generic description)
-  if (content.length < 50) {
-    return false;
-  }
-
-  // Check for signs of hallucination - generic phrases without specifics
-  const hallucinationIndicators = [
-    'leading provider of',
-    'trusted by',
-    'helps organizations',
-    'enables companies',
-    'comprehensive solution',
-    'industry-leading',
-    'best-in-class',
-    'world-class'
-  ];
-
-  const genericPhraseCount = hallucinationIndicators.filter(phrase =>
-    contentLower.includes(phrase)
-  ).length;
-
-  // If content is mostly generic marketing speak without specific details, reject
-  if (genericPhraseCount >= 3 && !contentLower.includes(companyLower)) {
-    return false;
-  }
-
-  // Must have specific verifiable details - names, dates, or concrete facts
-  const hasSpecificDetails =
-    /\b(20\d{2})\b/.test(content) || // Year mentioned
-    /\$[\d,]+/.test(content) || // Dollar amount
-    /\d+%/.test(content) || // Percentage
-    /\d+ (employees?|users?|customers?|years?)/.test(contentLower) || // Numbers with context
-    contentLower.includes('announced') ||
-    contentLower.includes('selected') ||
-    contentLower.includes('deployed') ||
-    contentLower.includes('implemented');
-
-  return hasSpecificDetails || (companyInTitle && companyInContent);
-}
-
-export async function tavilySearchCompetitorMentions(
+/**
+ * Consolidated competitor search: uses 2-3 broad queries instead of 24 narrow ones.
+ * Returns raw search results for AI extraction to process.
+ */
+export async function tavilyConsolidatedCompetitorSearch(
   companyName: string,
+  competitors: string[],
   apiKey: string
-): Promise<CompetitorMention[]> {
-  const mentions: CompetitorMention[] = [];
+): Promise<{ title: string; url: string; content: string }[]> {
+  if (competitors.length === 0) return [];
+
+  const competitorOR = competitors.map(c => `"${c}"`).join(' OR ');
+
+  const queries = [
+    `"${companyName}" (${competitorOR}) partnership OR customer OR integration`,
+    `"${companyName}" (${competitorOR}) site:businesswire.com OR site:prnewswire.com`,
+  ];
+
   const seenUrls = new Set<string>();
+  const results: { title: string; url: string; content: string }[] = [];
 
-  // Import anti-hallucination module
-  const { scoreAndFilterResults, generateCompetitorSearchQueries } = await import('./antiHallucination');
+  try {
+    const responses = await Promise.all(
+      queries.map(query =>
+        tavilySearch(query, apiKey, {
+          maxResults: 10,
+          includeAnswer: false,
+          searchDepth: 'advanced'
+        }).catch(err => {
+          console.warn(`Tavily competitor search query failed: ${query}`, err);
+          return { query, results: [] as TavilySearchResult[], response_time: 0 };
+        })
+      )
+    );
 
-  // Search across all competitor sites using better query patterns
-  for (const domain of COMPETITOR_DOMAINS) {
-    const competitorName = COMPETITOR_NAMES[domain];
-
-    try {
-      // Use targeted queries that are less likely to return hallucinated results
-      const queries = generateCompetitorSearchQueries(companyName, competitorName);
-
-      // Run first two queries (press releases and announcements)
-      const searchResults: TavilySearchResult[] = [];
-
-      for (const query of queries.slice(0, 2)) {
-        try {
-          const response = await tavilySearch(query, apiKey, {
-            maxResults: 3,
-            includeAnswer: false,
-            searchDepth: 'advanced'
-          });
-          searchResults.push(...response.results);
-        } catch (err) {
-          console.warn(`Search query failed: ${query}`, err);
+    for (const response of responses) {
+      for (const r of response.results) {
+        if (!seenUrls.has(r.url)) {
+          seenUrls.add(r.url);
+          results.push({ title: r.title, url: r.url, content: r.content });
         }
       }
-
-      if (searchResults.length === 0) continue;
-
-      // Apply anti-hallucination scoring
-      const scoredResults = scoreAndFilterResults(
-        searchResults.map(r => ({
-          title: r.title,
-          url: r.url,
-          content: r.content,
-          score: r.score
-        })),
-        companyName,
-        competitorName,
-        {
-          minConfidence: 60,
-          maxResults: 3,
-          debug: process.env.NODE_ENV === 'development'
-        }
-      );
-
-      for (const result of scoredResults) {
-        // Skip duplicates
-        if (seenUrls.has(result.url)) continue;
-        seenUrls.add(result.url);
-
-        // Additional business relationship check
-        if (!isBusinessRelationship(result.content, result.title, companyName)) {
-          continue;
-        }
-
-        mentions.push({
-          competitorName,
-          title: result.title,
-          url: result.url,
-          summary: createTechSummary(result.content, companyName),
-          mentionType: inferMentionType(result.url, result.content),
-          confidence: result.confidence,
-          unverified: result.unverified
-        });
-      }
-    } catch (err) {
-      console.warn(`Failed to search competitor ${competitorName} for ${companyName}:`, err);
     }
+  } catch (err) {
+    console.warn(`Tavily consolidated competitor search failed for ${companyName}:`, err);
   }
 
-  // Sort by confidence (highest first)
-  mentions.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
-
-  // Return top 10 mentions
-  return mentions.slice(0, 10);
+  return results;
 }
 
 export interface RegulatoryEvent {

@@ -3,8 +3,9 @@ import { createAIProvider } from '@/lib/ai/factory';
 import { AnalyzeRequest, AnalyzeResponse, ApiError, CacheMetadata } from '@/types/api';
 import { ProviderName, PROVIDER_INFO, AnalysisResult } from '@/types/analysis';
 import { searchCompanyNews, searchCompanyCaseStudies, searchCompanyInfo, searchInvestorDocuments, searchInvestorPresentation } from '@/lib/services/webSearch';
-import { tavilySearchCompanyNews, tavilySearchCaseStudies, tavilySearchCompanyInfo, tavilySearchInvestorDocs, tavilySearchInvestorPresentation, tavilySearchCompetitorMentions, tavilySearchLeadershipChanges, tavilySearchRegulatoryEvents, CompetitorMention, RegulatoryEvent } from '@/lib/services/tavilySearch';
-import { claudeSearchCompanyNews, claudeSearchCaseStudies, claudeSearchCompanyInfo, claudeSearchInvestorDocs, claudeSearchInvestorPresentation, claudeSearchLeadershipChanges, claudeSearchRegulatoryEvents, claudeSearchCompetitorMentions } from '@/lib/services/claudeSearch';
+import { tavilySearchCompanyNews, tavilySearchCaseStudies, tavilySearchCompanyInfo, tavilySearchInvestorDocs, tavilySearchInvestorPresentation, tavilyConsolidatedCompetitorSearch, tavilySearchLeadershipChanges, tavilySearchRegulatoryEvents, RegulatoryEvent } from '@/lib/services/tavilySearch';
+import { claudeSearchCompanyNews, claudeSearchCaseStudies, claudeSearchCompanyInfo, claudeSearchInvestorDocs, claudeSearchInvestorPresentation, claudeSearchLeadershipChanges, claudeSearchRegulatoryEvents, claudeConsolidatedCompetitorSearch } from '@/lib/services/claudeSearch';
+import { extractCompetitorMentions } from '@/lib/services/competitorExtraction';
 import { createClient } from '@/lib/supabase/server';
 import { parseLeadershipArticles } from '@/lib/ai/parseLeadershipNews';
 import { deduplicateRegulatoryEvents } from '@/lib/ai/parser';
@@ -12,6 +13,11 @@ import { logUsage } from '@/lib/services/usageLogger';
 
 // Cache expiry: 24 hours (in minutes)
 const CACHE_EXPIRY_MINUTES = 24 * 60;
+
+const HARDCODED_COMPETITORS = [
+  'Smarsh', 'Global Relay', 'NICE', 'Verint', 'Arctera', 'Veritas',
+  'Proofpoint', 'Shield', 'Behavox', 'Digital Reasoning', 'Mimecast', 'ZL Technologies'
+];
 
 // Type for cached analysis record
 interface CachedAnalysis {
@@ -96,6 +102,21 @@ export async function POST(request: NextRequest) {
     if (!companyName?.trim()) {
       return NextResponse.json<ApiError>(
         { error: 'Company name is required' },
+        { status: 400 }
+      );
+    }
+
+    const trimmedName = companyName.trim();
+    if (trimmedName.length > 200) {
+      return NextResponse.json<ApiError>(
+        { error: 'Company name must be 200 characters or fewer' },
+        { status: 400 }
+      );
+    }
+
+    if (!/^[\p{L}\p{N}\s\-.,&'()\/]+$/u.test(trimmedName)) {
+      return NextResponse.json<ApiError>(
+        { error: 'Company name contains invalid characters' },
         { status: 400 }
       );
     }
@@ -209,14 +230,13 @@ export async function POST(request: NextRequest) {
     if (shouldUseWebSearch) {
       try {
         if (useTavily) {
-          // Use Tavily for web search
-          const [newsResults, caseStudyResults, infoResults, investorDocsResults, investorPresentationResults, competitorMentionsResults, leadershipResults, regulatoryResults] = await Promise.all([
+          // Use Tavily for web search (competitor search handled separately after AI analysis)
+          const [newsResults, caseStudyResults, infoResults, investorDocsResults, investorPresentationResults, leadershipResults, regulatoryResults] = await Promise.all([
             tavilySearchCompanyNews(companyName.trim(), tavilyApiKey!),
             tavilySearchCaseStudies(companyName.trim(), tavilyApiKey!),
             tavilySearchCompanyInfo(companyName.trim(), tavilyApiKey!),
             tavilySearchInvestorDocs(companyName.trim(), tavilyApiKey!),
             tavilySearchInvestorPresentation(companyName.trim(), tavilyApiKey!),
-            tavilySearchCompetitorMentions(companyName.trim(), tavilyApiKey!),
             tavilySearchLeadershipChanges(companyName.trim(), tavilyApiKey!),
             tavilySearchRegulatoryEvents(companyName.trim(), tavilyApiKey!)
           ]);
@@ -227,21 +247,19 @@ export async function POST(request: NextRequest) {
             info: { sources: infoResults.sources.map(r => ({ title: r.title, url: r.url, description: r.content })) },
             investorDocs: investorDocsResults.map(r => ({ title: r.title, url: r.url, description: r.content })),
             investorPresentation: investorPresentationResults.map(r => ({ title: r.title, url: r.url, description: r.content })),
-            competitorMentions: competitorMentionsResults,
             leadershipChanges: leadershipResults.map(r => ({ title: r.title, url: r.url, description: r.content })),
             regulatoryEvents: regulatoryResults
           };
         } else if (useClaudeSearch) {
-          // Use Claude web search (powered by Brave)
-          const [newsResults, caseStudyResults, infoResults, investorDocsResults, investorPresentationResults, leadershipResults, regulatoryResults, competitorResults] = await Promise.all([
+          // Use Claude web search (competitor search handled separately after AI analysis)
+          const [newsResults, caseStudyResults, infoResults, investorDocsResults, investorPresentationResults, leadershipResults, regulatoryResults] = await Promise.all([
             claudeSearchCompanyNews(companyName.trim(), apiKey),
             claudeSearchCaseStudies(companyName.trim(), apiKey),
             claudeSearchCompanyInfo(companyName.trim(), apiKey),
             claudeSearchInvestorDocs(companyName.trim(), apiKey),
             claudeSearchInvestorPresentation(companyName.trim(), apiKey),
             claudeSearchLeadershipChanges(companyName.trim(), apiKey),
-            claudeSearchRegulatoryEvents(companyName.trim(), apiKey),
-            claudeSearchCompetitorMentions(companyName.trim(), apiKey)
+            claudeSearchRegulatoryEvents(companyName.trim(), apiKey)
           ]);
 
           webSearchData = {
@@ -251,8 +269,7 @@ export async function POST(request: NextRequest) {
             investorDocs: investorDocsResults.map(r => ({ title: r.title, url: r.url, description: r.content })),
             investorPresentation: investorPresentationResults.map(r => ({ title: r.title, url: r.url, description: r.content })),
             leadershipChanges: leadershipResults.map(r => ({ title: r.title, url: r.url, description: r.content })),
-            regulatoryEvents: regulatoryResults,
-            competitorMentions: competitorResults
+            regulatoryEvents: regulatoryResults
           };
         } else {
           // Use WebSearchAPI for web search
@@ -295,6 +312,36 @@ export async function POST(request: NextRequest) {
     const aiProvider = createAIProvider(provider as ProviderName, apiKey, { model });
     const analysis = await aiProvider.analyzeCompany(companyName.trim());
     const durationMs = Date.now() - startTime;
+
+    // Phase 2: Consolidated competitor search using AI-discovered + hardcoded competitors
+    if (shouldUseWebSearch) {
+      try {
+        const allCompetitors = [...new Set([...HARDCODED_COMPETITORS, ...(analysis.discoveredCompetitors || [])])];
+
+        // Run consolidated search (2-3 queries instead of 24)
+        let competitorSearchResults: { title: string; url: string; content: string }[] = [];
+        if (useTavily) {
+          competitorSearchResults = await tavilyConsolidatedCompetitorSearch(companyName.trim(), allCompetitors, tavilyApiKey!);
+        } else if (useClaudeSearch) {
+          competitorSearchResults = await claudeConsolidatedCompetitorSearch(companyName.trim(), allCompetitors, apiKey);
+        }
+
+        // Phase 3: AI extraction from search results
+        if (competitorSearchResults.length > 0) {
+          const providerType = provider as 'anthropic' | 'openai' | 'gemini';
+          const extractedMentions = await extractCompetitorMentions(
+            companyName.trim(),
+            allCompetitors,
+            competitorSearchResults,
+            { type: providerType, apiKey, model }
+          );
+          analysis.competitorMentions = extractedMentions;
+          console.log(`Competitor extraction: ${competitorSearchResults.length} search results → ${extractedMentions.length} verified mentions`);
+        }
+      } catch (err) {
+        console.warn('Competitor search/extraction failed (non-fatal):', err);
+      }
+    }
 
     // If we have web search data, merge it with the analysis results
     if (webSearchData) {
@@ -345,17 +392,6 @@ export async function POST(request: NextRequest) {
           { title: 'Investor Presentation', url: '', summary: 'No recent investor presentation found for this company.' },
           ...analysis.investorDocs
         ];
-      }
-
-      // Replace competitor mentions with real web search results (Tavily only)
-      if (webSearchData.competitorMentions && webSearchData.competitorMentions.length > 0) {
-        analysis.competitorMentions = webSearchData.competitorMentions.map((item: CompetitorMention) => ({
-          competitorName: item.competitorName,
-          mentionType: item.mentionType,
-          title: item.title,
-          url: item.url,
-          summary: item.summary
-        }));
       }
 
       // Replace leadership changes with real web search results (Tavily only)
@@ -418,7 +454,7 @@ export async function POST(request: NextRequest) {
         ...webSearchData.caseStudies.map(c => c.url),
         ...webSearchData.investorDocs.map(d => d.url),
         ...webSearchData.info.sources.map(s => s.url),
-        ...(webSearchData.competitorMentions || []).map((c: CompetitorMention) => c.url),
+        ...(analysis.competitorMentions || []).map(c => c.url),
         ...(webSearchData.regulatoryEvents || []).map((e: RegulatoryEvent) => e.url)
       ].filter(Boolean);
 

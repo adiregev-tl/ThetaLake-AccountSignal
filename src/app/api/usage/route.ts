@@ -187,6 +187,25 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { dailyThreshold, weeklyThreshold, monthlyThreshold, alertsEnabled } = body;
 
+    // Validate threshold values are positive numbers
+    for (const [name, value] of Object.entries({ dailyThreshold, weeklyThreshold, monthlyThreshold })) {
+      if (value !== undefined) {
+        if (typeof value !== 'number' || !isFinite(value) || value < 0) {
+          return NextResponse.json(
+            { error: `${name} must be a non-negative number` },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
+    if (alertsEnabled !== undefined && typeof alertsEnabled !== 'boolean') {
+      return NextResponse.json(
+        { error: 'alertsEnabled must be a boolean' },
+        { status: 400 }
+      );
+    }
+
     // Check if settings exist
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: existing } = await (supabase as any)

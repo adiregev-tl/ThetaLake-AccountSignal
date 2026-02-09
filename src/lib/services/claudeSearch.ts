@@ -290,166 +290,24 @@ Only include REAL, verified regulatory events with actual source URLs. Do not fa
   return events.slice(0, 10);
 }
 
-export interface ClaudeCompetitorMention {
-  competitorName: string;
-  title: string;
-  url: string;
-  summary: string;
-  mentionType: 'customer' | 'partner' | 'case_study' | 'press_release' | 'integration' | 'other';
-  confidence?: number;    // 0-100 confidence score from anti-hallucination system
-  unverified?: boolean;   // true if 60-74 confidence (show warning badge)
-}
-
-// Competitor domain mappings for URL validation
-const COMPETITOR_DOMAINS: Record<string, string[]> = {
-  'Smarsh': ['smarsh.com'],
-  'Global Relay': ['globalrelay.com'],
-  'NICE': ['nice.com', 'niceactimize.com'],
-  'Verint': ['verint.com'],
-  'Arctera': ['arctera.io'],
-  'Veritas': ['veritas.com'],
-  'Proofpoint': ['proofpoint.com'],
-  'Shield': ['shieldfc.com'],
-  'Behavox': ['behavox.com'],
-  'Mimecast': ['mimecast.com'],
-  'ZL Technologies': ['zlti.com'],
-  'Digital Reasoning': ['digitalreasoning.com'],
-};
-
-// Validate URL belongs to claimed competitor
-function isValidCompetitorUrl(url: string, competitorName: string): boolean {
-  try {
-    const urlObj = new URL(url);
-    const hostname = urlObj.hostname.toLowerCase();
-    const validDomains = COMPETITOR_DOMAINS[competitorName] || [];
-
-    return validDomains.some(domain => {
-      const domainLower = domain.toLowerCase();
-      return hostname === domainLower ||
-             hostname.endsWith('.' + domainLower) ||
-             hostname === 'www.' + domainLower;
-    });
-  } catch {
-    return false;
-  }
-}
-
-// Check if URL is a generic listing/index page (likely hallucinated)
-function isGenericListingPage(url: string): boolean {
-  try {
-    const path = new URL(url).pathname.toLowerCase();
-
-    // Reject URLs that end with generic listing paths
-    const genericPatterns = [
-      /\/customers\/?$/,
-      /\/clients\/?$/,
-      /\/case-studies\/?$/,
-      /\/case-study\/?$/,
-      /\/resources\/?$/,
-      /\/resources\/case-studies\/?$/,
-      /\/success-stories\/?$/,
-      /\/testimonials\/?$/,
-      /\/partners\/?$/,
-      /\/integrations\/?$/,
-      /\/solutions\/?$/,
-      /\/industries\/?$/,
-      /\/news\/?$/,
-      /\/press\/?$/,
-      /\/blog\/?$/,
-      /\/us\/resources\/case-studies\/?$/, // Proofpoint specific
-    ];
-
-    for (const pattern of genericPatterns) {
-      if (pattern.test(path)) {
-        return true;
-      }
-    }
-
-    // Also reject very short paths (likely index pages)
-    const pathParts = path.split('/').filter(p => p.length > 0);
-    if (pathParts.length <= 1) {
-      return true;
-    }
-
-    return false;
-  } catch {
-    return true; // Invalid URL, reject it
-  }
-}
-
-// Validate URL actually exists, returns 200, and contains the company name
-async function validateUrlAndContent(url: string, companyName: string): Promise<boolean> {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
-
-    const response = await fetch(url, {
-      method: 'GET',
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml',
-      }
-    });
-
-    clearTimeout(timeout);
-
-    if (response.status !== 200) {
-      console.warn(`URL returned status ${response.status}: ${url}`);
-      return false;
-    }
-
-    const contentType = response.headers.get('content-type') || '';
-    if (!contentType.includes('text/html')) {
-      return false;
-    }
-
-    const text = await response.text();
-    const companyLower = companyName.toLowerCase();
-    const textLower = text.toLowerCase();
-
-    if (!textLower.includes(companyLower)) {
-      console.warn(`Company name "${companyName}" not found in page: ${url}`);
-      return false;
-    }
-
-    // Check for soft 404
-    const soft404Indicators = ['page not found', '404', 'not found', 'no longer available'];
-    for (const indicator of soft404Indicators) {
-      if (textLower.includes(indicator)) {
-        return false;
-      }
-    }
-
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export async function claudeSearchCompetitorMentions(
+/**
+ * Consolidated competitor search using Claude web search.
+ * Uses 2-3 broad queries instead of 24 narrow ones.
+ * Returns raw search results for AI extraction to process.
+ */
+export async function claudeConsolidatedCompetitorSearch(
   companyName: string,
+  competitors: string[],
   apiKey: string
-): Promise<ClaudeCompetitorMention[]> {
-  const { scoreAndFilterResults, generateCompetitorSearchQueries } = await import('./antiHallucination');
+): Promise<{ title: string; url: string; content: string }[]> {
+  if (competitors.length === 0) return [];
 
   const client = new Anthropic({ apiKey });
-  const mentions: ClaudeCompetitorMention[] = [];
-  const seenUrls = new Set<string>();
+  const competitorList = competitors.join(', ');
 
-  // Iterate through all competitors
-  for (const [competitorName] of Object.entries(COMPETITOR_DOMAINS)) {
-    try {
-      // Use targeted queries
-      const queries = generateCompetitorSearchQueries(companyName, competitorName);
-      const query = queries[0]; // Use the press release query (most reliable)
+  const systemPrompt = `You are a research assistant. Search for business relationships between "${companyName}" and these competitors: ${competitorList}.
 
-      const systemPrompt = `You are a research assistant. Search for business relationships between "${companyName}" and "${competitorName}".
-
-Look for:
-- Press releases about partnerships or customer relationships
-- News articles about deployments or implementations
-- Case studies mentioning "${companyName}" as a customer
+Look for partnerships, customer relationships, integrations, press releases, and case studies.
 
 Return as JSON:
 {
@@ -461,112 +319,60 @@ Return as JSON:
 IMPORTANT:
 - Only include REAL results with actual, working URLs
 - Do not fabricate or guess URLs
-- Only include results where "${companyName}" is explicitly mentioned
+- Only include results where "${companyName}" is explicitly mentioned alongside a competitor
 - Focus on press releases from businesswire.com, prnewswire.com, or news sites`;
 
-      const response = await client.messages.create({
-        model: 'claude-sonnet-4-5-20250929',
-        max_tokens: 2048,
-        tools: [
-          {
-            type: 'web_search_20250305' as const,
-            name: 'web_search',
-            max_uses: 2,
-          },
-        ] as unknown as Anthropic.Tool[],
-        messages: [
-          {
-            role: 'user',
-            content: query,
-          },
-        ],
-        system: systemPrompt,
-      });
+  try {
+    const response = await client.messages.create({
+      model: 'claude-sonnet-4-5-20250929',
+      max_tokens: 4096,
+      tools: [
+        {
+          type: 'web_search_20250305' as const,
+          name: 'web_search',
+          max_uses: 5,
+        },
+      ] as unknown as Anthropic.Tool[],
+      messages: [
+        {
+          role: 'user',
+          content: `Search for business relationships, partnerships, integrations, and customer mentions between "${companyName}" and these competitors: ${competitorList}`,
+        },
+      ],
+      system: systemPrompt,
+    });
 
-      // Extract results from response
-      const rawResults: { title: string; url: string; content: string }[] = [];
+    const seenUrls = new Set<string>();
+    const results: { title: string; url: string; content: string }[] = [];
 
-      for (const block of response.content) {
-        if (block.type === 'text') {
-          try {
-            const jsonMatch = block.text.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              const parsed = JSON.parse(jsonMatch[0]);
-              if (parsed.results && Array.isArray(parsed.results)) {
-                for (const r of parsed.results) {
-                  if (r.title && r.url) {
-                    rawResults.push({
-                      title: r.title,
-                      url: r.url,
-                      content: r.content || '',
-                    });
-                  }
+    for (const block of response.content) {
+      if (block.type === 'text') {
+        try {
+          const jsonMatch = block.text.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.results && Array.isArray(parsed.results)) {
+              for (const r of parsed.results) {
+                if (r.title && r.url && !seenUrls.has(r.url)) {
+                  seenUrls.add(r.url);
+                  results.push({
+                    title: r.title,
+                    url: r.url,
+                    content: r.content || '',
+                  });
                 }
               }
             }
-          } catch {
-            // JSON parsing failed
           }
+        } catch {
+          // JSON parsing failed
         }
       }
-
-      if (rawResults.length === 0) continue;
-
-      // Apply anti-hallucination scoring
-      const scoredResults = scoreAndFilterResults(
-        rawResults.map(r => ({
-          title: r.title,
-          url: r.url,
-          content: r.content,
-          score: 0.8, // Claude results assumed to have decent relevance
-        })),
-        companyName,
-        competitorName,
-        {
-          minConfidence: 60,
-          maxResults: 2,
-          debug: process.env.NODE_ENV === 'development'
-        }
-      );
-
-      for (const result of scoredResults) {
-        if (seenUrls.has(result.url)) continue;
-        seenUrls.add(result.url);
-
-        // Infer mention type
-        let mentionType: ClaudeCompetitorMention['mentionType'] = 'other';
-        const urlLower = result.url.toLowerCase();
-        const contentLower = result.content.toLowerCase();
-
-        if (urlLower.includes('case-study') || contentLower.includes('case study')) {
-          mentionType = 'case_study';
-        } else if (urlLower.includes('press') || urlLower.includes('news') || urlLower.includes('businesswire') || urlLower.includes('prnewswire')) {
-          mentionType = 'press_release';
-        } else if (contentLower.includes('partner')) {
-          mentionType = 'partner';
-        } else if (contentLower.includes('customer') || contentLower.includes('client')) {
-          mentionType = 'customer';
-        } else if (contentLower.includes('integration') || contentLower.includes('integrates')) {
-          mentionType = 'integration';
-        }
-
-        mentions.push({
-          competitorName,
-          title: result.title,
-          url: result.url,
-          summary: result.content.substring(0, 150) + (result.content.length > 150 ? '...' : ''),
-          mentionType,
-          confidence: result.confidence,
-          unverified: result.unverified,
-        });
-      }
-    } catch (err) {
-      console.warn(`Failed to search Claude for ${competitorName}:`, err);
     }
+
+    return results;
+  } catch (err) {
+    console.warn(`Claude consolidated competitor search failed for ${companyName}:`, err);
+    return [];
   }
-
-  // Sort by confidence
-  mentions.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
-
-  return mentions.slice(0, 10);
 }

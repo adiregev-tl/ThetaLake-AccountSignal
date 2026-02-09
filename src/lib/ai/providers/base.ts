@@ -85,6 +85,11 @@ IMPORTANT: Only include case studies HOSTED BY other companies, NOT case studies
 Format: Vendor: Title | URL | Summary
 [/CASE_STUDIES]
 
+[COMPETITORS]
+List the top 5-8 direct competitors of ${companyName} in their primary market.
+These must be real, named companies. One name per line.
+[/COMPETITORS]
+
 [COMPETITOR_MENTIONS]
 Search for TECHNOLOGY-RELATED mentions of "${companyName}" involving these compliance/archiving competitors: Smarsh, Global Relay, NICE, Verint, Arctera, Veritas, Proofpoint, Shield, Behavox, Digital Reasoning, Mimecast, ZL Technologies.
 

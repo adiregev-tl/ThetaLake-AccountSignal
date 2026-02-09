@@ -8,6 +8,7 @@ export interface AnalysisResult {
   techNews: LinkItem[];
   caseStudies: LinkItem[];
   competitorMentions: CompetitorMentionItem[];
+  discoveredCompetitors?: string[];
   leadershipChanges: LeadershipChangeItem[];
   maActivity: MAItem[];
   regulatoryLandscape: RegulatoryBodyMention[];
@@ -68,8 +69,6 @@ export interface CompetitorMentionItem {
   url: string;
   date?: string;
   summary: string;
-  confidence?: number;    // 0-100 confidence score from anti-hallucination system
-  unverified?: boolean;   // true if 60-74 confidence (show warning badge)
 }
 
 export interface LeadershipChangeItem {

@@ -416,6 +416,15 @@ export function deduplicateRegulatoryEvents(events: RegulatoryEventItem[]): Regu
   });
 }
 
+function parseCompetitorList(content: string): string[] {
+  if (!content) return [];
+  return content
+    .split('\n')
+    .map(line => line.replace(/^[\d\-\*\.]+\s*/, '').trim())
+    .filter(line => line.length > 0 && line.length < 100)
+    .slice(0, 8);
+}
+
 export function parseTaggedResponse(text: string): AnalysisResult {
   return {
     summary: parseTagContent(text, 'SUMMARY'),
@@ -427,6 +436,7 @@ export function parseTaggedResponse(text: string): AnalysisResult {
     techNews: parseListItems(parseTagContent(text, 'TECH_NEWS')),
     caseStudies: parseListItems(parseTagContent(text, 'CASE_STUDIES')),
     competitorMentions: parseCompetitorMentions(parseTagContent(text, 'COMPETITOR_MENTIONS')),
+    discoveredCompetitors: parseCompetitorList(parseTagContent(text, 'COMPETITORS')),
     leadershipChanges: parseLeadershipChanges(parseTagContent(text, 'LEADERSHIP_CHANGES')),
     maActivity: parseMAActivity(parseTagContent(text, 'MA_ACTIVITY')),
     regulatoryLandscape: parseRegulatoryLandscape(parseTagContent(text, 'REGULATORY_LANDSCAPE')),

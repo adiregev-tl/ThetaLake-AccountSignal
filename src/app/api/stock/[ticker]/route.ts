@@ -55,6 +55,14 @@ export async function GET(
     );
   }
 
+  // Validate ticker format (alphanumeric, dots, hyphens; max 10 chars)
+  if (!/^[A-Za-z0-9.\-]{1,10}$/.test(ticker)) {
+    return NextResponse.json<ApiError>(
+      { error: 'Invalid ticker format' },
+      { status: 400 }
+    );
+  }
+
   // Validate range
   const rangeConfig = RANGE_CONFIG[range];
   if (!rangeConfig) {

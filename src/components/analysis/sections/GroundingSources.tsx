@@ -1,4 +1,5 @@
 import { Link as LinkIcon } from 'lucide-react';
+import { isValidHttpUrl } from '@/lib/utils';
 
 interface GroundingSourcesProps {
   sources: string[];
@@ -13,7 +14,8 @@ function extractHostname(url: string): string {
 }
 
 export function GroundingSources({ sources }: GroundingSourcesProps) {
-  if (!sources || sources.length === 0) return null;
+  const validSources = (sources || []).filter(isValidHttpUrl);
+  if (validSources.length === 0) return null;
 
   return (
     <div className="mt-8 p-5 bg-card/50 dark:bg-muted/50 rounded-xl border border-border">
@@ -22,7 +24,7 @@ export function GroundingSources({ sources }: GroundingSourcesProps) {
         Grounding Sources
       </h3>
       <div className="flex flex-wrap gap-2">
-        {sources.map((url, i) => (
+        {validSources.map((url, i) => (
           <a
             key={i}
             href={url}

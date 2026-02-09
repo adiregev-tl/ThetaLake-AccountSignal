@@ -161,6 +161,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Query parameter "q" is required' }, { status: 400 });
   }
 
+  if (query.length > 200) {
+    return NextResponse.json({ error: 'Query must be 200 characters or fewer' }, { status: 400 });
+  }
+
   const normalizedQuery = query.toLowerCase().trim();
 
   // Find matching companies

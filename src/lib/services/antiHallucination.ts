@@ -1,4 +1,8 @@
 /**
+ * @deprecated This module is no longer used for competitor mentions.
+ * Competitor search now uses AI extraction with URL validation (competitorExtraction.ts),
+ * which eliminates hallucinated URLs by design.
+ *
  * Anti-Hallucination Module
  *
  * Provides heuristic-based scoring to filter out fabricated/hallucinated
