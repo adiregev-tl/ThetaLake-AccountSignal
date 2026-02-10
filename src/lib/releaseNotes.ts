@@ -10,6 +10,30 @@ export interface ReleaseNote {
 
 export const releaseNotes: ReleaseNote[] = [
   {
+    version: '1.4.1',
+    date: '2026-02-10',
+    highlights: [
+      'Fixed competitor mentions hallucination leak',
+      'Broadened search to any source mentioning company + vendor together',
+    ],
+    changes: [
+      {
+        category: 'Fixed',
+        items: [
+          'Removed AI-generated competitor mentions from prompt — was producing hallucinated URLs',
+          'Competitor mentions now cleared before extraction, so only verified results appear',
+        ],
+      },
+      {
+        category: 'Changed',
+        items: [
+          'Search now finds mentions from any source (vendor, company, news), not just vendor-published content',
+          'Added third search query for announcement-style coverage',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.4.0',
     date: '2026-02-09',
     highlights: [
