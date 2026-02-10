@@ -313,13 +313,16 @@ export async function POST(request: NextRequest) {
     const analysis = await aiProvider.analyzeCompany(companyName.trim());
     const durationMs = Date.now() - startTime;
 
-    // Phase 2: Search for Theta Lake's competitors that have published content about this company
+    // Clear any AI-generated competitor mentions — only use verified results from web search
+    analysis.competitorMentions = [];
+
+    // Phase 2: Search for Theta Lake's competitors mentioned alongside this company
     // Merge hardcoded compliance vendors with any additional vendors discovered by AI
     if (shouldUseWebSearch) {
       try {
         const allCompetitors = [...new Set([...HARDCODED_COMPETITORS, ...(analysis.discoveredCompetitors || [])])];
 
-        // Run consolidated search (2-3 queries instead of 24)
+        // Run consolidated search (3 queries instead of 24)
         let competitorSearchResults: { title: string; url: string; content: string }[] = [];
         if (useTavily) {
           competitorSearchResults = await tavilyConsolidatedCompetitorSearch(companyName.trim(), allCompetitors, tavilyApiKey!);
@@ -327,7 +330,7 @@ export async function POST(request: NextRequest) {
           competitorSearchResults = await claudeConsolidatedCompetitorSearch(companyName.trim(), allCompetitors, apiKey);
         }
 
-        // Phase 3: AI extraction from search results
+        // Phase 3: AI extraction from search results — URLs constrained to actual results
         if (competitorSearchResults.length > 0) {
           const providerType = provider as 'anthropic' | 'openai' | 'gemini';
           const extractedMentions = await extractCompetitorMentions(

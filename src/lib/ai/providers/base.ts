@@ -91,14 +91,7 @@ These must be real, named companies. One name per line. If none, leave empty.
 [/COMPLIANCE_VENDORS]
 
 [COMPETITOR_MENTIONS]
-Search for TECHNOLOGY-RELATED mentions of "${companyName}" involving these compliance/archiving competitors: Smarsh, Global Relay, NICE, Verint, Arctera, Veritas, Proofpoint, Shield, Behavox, Digital Reasoning, Mimecast, ZL Technologies.
-
-INCLUDE: Technology partnerships, product integrations, customer case studies, competitive comparisons, technology announcements, product launches, platform integrations.
-
-EXCLUDE: Financial advisory roles, board positions, conference co-authorship, investment banking, generic industry reports, regulatory filings where company is just listed.
-
-IMPORTANT: Only include REAL URLs from competitor websites. Provide a 1-2 sentence summary of the technology relevance.
-Format: Competitor Name | Mention Type (customer/partner/comparison/case_study/press_release/integration) | Title | Full URL | Date (YYYY-MM) | Technology summary (what product/integration/use case)
+Leave this section empty. Competitor mentions are populated separately via verified web search.
 [/COMPETITOR_MENTIONS]
 
 [LEADERSHIP_CHANGES]
