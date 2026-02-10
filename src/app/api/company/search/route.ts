@@ -256,6 +256,14 @@ export async function GET(request: NextRequest) {
           );
           if (alreadyPresent) continue;
 
+          // Filter out irrelevant Yahoo results — require name similarity to the query
+          const nameLC = name.toLowerCase();
+          const nameSimilarity = similarity(nameLC, normalizedQuery);
+          // Also check if the Yahoo result name is a substring of the query or vice versa
+          const nameInQuery = normalizedQuery.includes(nameLC);
+          const queryInName = nameLC.includes(normalizedQuery);
+          if (nameSimilarity < 0.35 && !nameInQuery && !queryInName) continue;
+
           const isEquity = quote.quoteType === 'EQUITY';
           const exchange = (quote.exchange || '') as string;
 
