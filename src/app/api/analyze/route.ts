@@ -242,7 +242,7 @@ export async function POST(request: NextRequest) {
           ]);
 
           webSearchData = {
-            news: newsResults.map(r => ({ title: r.title, url: r.url, description: r.content })),
+            news: newsResults.map(r => ({ title: r.title, url: r.url, description: r.content, date: r.published_date })),
             caseStudies: caseStudyResults.map(r => ({ title: r.title, url: r.url, description: r.content })),
             info: { sources: infoResults.sources.map(r => ({ title: r.title, url: r.url, description: r.content })) },
             investorDocs: investorDocsResults.map(r => ({ title: r.title, url: r.url, description: r.content })),
@@ -263,7 +263,7 @@ export async function POST(request: NextRequest) {
           ]);
 
           webSearchData = {
-            news: newsResults.map(r => ({ title: r.title, url: r.url, description: r.content })),
+            news: newsResults.map(r => ({ title: r.title, url: r.url, description: r.content, date: undefined as string | undefined })),
             caseStudies: caseStudyResults.map(r => ({ title: r.title, url: r.url, description: r.content })),
             info: { sources: infoResults.sources.map(r => ({ title: r.title, url: r.url, description: r.content })) },
             investorDocs: investorDocsResults.map(r => ({ title: r.title, url: r.url, description: r.content })),
@@ -282,7 +282,7 @@ export async function POST(request: NextRequest) {
           ]);
 
           webSearchData = {
-            news: newsResults,
+            news: newsResults.map(r => ({ title: r.title, url: r.url, description: r.description, date: r.date || r.publishedDate })),
             caseStudies: caseStudyResults,
             info: infoResults,
             investorDocs: investorDocsResults,
@@ -354,7 +354,8 @@ export async function POST(request: NextRequest) {
         analysis.techNews = webSearchData.news.map(item => ({
           title: item.title,
           url: item.url,
-          summary: item.description
+          summary: item.description,
+          date: item.date
         }));
       }
 

@@ -3,6 +3,7 @@ export interface TavilySearchResult {
   url: string;
   content: string;
   score: number;
+  published_date?: string;
 }
 
 export interface TavilySearchResponse {
@@ -22,13 +23,15 @@ export async function tavilySearch(
     maxResults?: number;
     includeAnswer?: boolean;
     includeRawContent?: boolean;
+    topic?: 'general' | 'news';
   } = {}
 ): Promise<TavilySearchResponse> {
   const {
     searchDepth = 'basic',
     maxResults = 10,
     includeAnswer = true,
-    includeRawContent = false
+    includeRawContent = false,
+    topic = 'general'
   } = options;
 
   const response = await fetch(TAVILY_API_URL, {
@@ -42,7 +45,8 @@ export async function tavilySearch(
       search_depth: searchDepth,
       max_results: maxResults,
       include_answer: includeAnswer,
-      include_raw_content: includeRawContent
+      include_raw_content: includeRawContent,
+      topic
     })
   });
 
@@ -61,7 +65,7 @@ export async function tavilySearchCompanyNews(
   const response = await tavilySearch(
     `${companyName} latest news technology AI developments`,
     apiKey,
-    { maxResults: 10, includeAnswer: false }
+    { maxResults: 10, includeAnswer: false, topic: 'news' }
   );
   return response.results;
 }

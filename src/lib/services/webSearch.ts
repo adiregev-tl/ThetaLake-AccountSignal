@@ -5,6 +5,8 @@ export interface WebSearchResult {
   content?: string;
   position: number;
   score: number;
+  date?: string;
+  publishedDate?: string;
 }
 
 export interface WebSearchResponse {

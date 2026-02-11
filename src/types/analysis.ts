@@ -52,6 +52,7 @@ export interface LinkItem {
   title: string;
   url: string;
   summary?: string;
+  date?: string;
 }
 
 export interface MAItem {
