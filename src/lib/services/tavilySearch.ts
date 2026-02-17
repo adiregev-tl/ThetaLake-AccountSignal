@@ -63,11 +63,20 @@ export async function tavilySearchCompanyNews(
   apiKey: string
 ): Promise<TavilySearchResult[]> {
   const response = await tavilySearch(
-    `${companyName} latest news technology AI developments`,
+    `"${companyName}" AI OR technology OR digital OR innovation OR automation`,
     apiKey,
-    { maxResults: 10, includeAnswer: false, topic: 'news' }
+    { maxResults: 15, includeAnswer: false, topic: 'news' }
   );
-  return response.results;
+  // Filter to only include results that actually mention the company
+  const companyLower = companyName.toLowerCase();
+  const companyWords = companyLower.split(/\s+/).filter(w => w.length > 2);
+  return response.results.filter(r => {
+    const text = (r.title + ' ' + r.content).toLowerCase();
+    // Require the full company name or most of its significant words to appear
+    if (text.includes(companyLower)) return true;
+    const matchingWords = companyWords.filter(w => text.includes(w));
+    return matchingWords.length >= Math.ceil(companyWords.length * 0.6);
+  });
 }
 
 export async function tavilySearchCaseStudies(

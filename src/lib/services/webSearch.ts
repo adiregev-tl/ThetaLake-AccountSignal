@@ -69,11 +69,19 @@ export async function searchCompanyNews(
   apiKey: string
 ): Promise<WebSearchResult[]> {
   const response = await searchWeb(
-    `${companyName} latest news technology AI`,
+    `"${companyName}" AI OR technology OR digital OR innovation OR automation`,
     apiKey,
-    { maxResults: 10, includeContent: false, includeAnswer: false, timeframe: 'month' }
+    { maxResults: 15, includeContent: false, includeAnswer: false, timeframe: 'month' }
   );
-  return response.organic;
+  // Filter to only include results that actually mention the company
+  const companyLower = companyName.toLowerCase();
+  const companyWords = companyLower.split(/\s+/).filter(w => w.length > 2);
+  return response.organic.filter(r => {
+    const text = (r.title + ' ' + r.description).toLowerCase();
+    if (text.includes(companyLower)) return true;
+    const matchingWords = companyWords.filter(w => text.includes(w));
+    return matchingWords.length >= Math.ceil(companyWords.length * 0.6);
+  });
 }
 
 export async function searchCompanyCaseStudies(
