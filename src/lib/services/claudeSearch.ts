@@ -133,7 +133,7 @@ export async function claudeSearchCompanyNews(
   apiKey: string
 ): Promise<ClaudeSearchResult[]> {
   const response = await claudeSearch(
-    `"${companyName}" AI OR technology OR digital OR innovation OR automation`,
+    `"${companyName}" AI adoption OR IT infrastructure OR digital transformation OR cloud migration OR technology strategy OR machine learning OR generative AI OR cybersecurity`,
     apiKey,
     { maxResults: 15, includeAnswer: false }
   );
