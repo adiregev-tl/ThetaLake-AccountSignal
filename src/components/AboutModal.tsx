@@ -34,7 +34,7 @@ export function AboutModal({ open, onOpenChange, providerName, modelName }: Abou
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-zinc-900 border-zinc-800">
+      <DialogContent className="sm:max-w-md max-h-[85vh] bg-zinc-900 border-zinc-800">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
             <Info className="w-5 h-5 text-emerald-400" />
@@ -42,7 +42,7 @@ export function AboutModal({ open, onOpenChange, providerName, modelName }: Abou
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-6 py-4 overflow-y-auto max-h-[calc(85vh-8rem)]">
           {/* App Description */}
           <div className="space-y-3">
             <p className="text-zinc-300 text-sm leading-relaxed">
@@ -51,11 +51,6 @@ export function AboutModal({ open, onOpenChange, providerName, modelName }: Abou
               Search any company to instantly generate a comprehensive 360-degree
               analysis — from executive summaries and financial signals to regulatory
               exposure and competitive landscape.
-            </p>
-            <p className="text-zinc-400 text-sm leading-relaxed">
-              Powered by your choice of AI provider (OpenAI, Anthropic Claude, Google Gemini,
-              or Perplexity) with Tavily web search for real-time data grounding. Analyses
-              are cached and shared across the team to minimize cost and maximize speed.
             </p>
           </div>
 
