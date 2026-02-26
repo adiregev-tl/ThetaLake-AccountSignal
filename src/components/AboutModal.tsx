@@ -46,14 +46,16 @@ export function AboutModal({ open, onOpenChange, providerName, modelName }: Abou
           {/* App Description */}
           <div className="space-y-3">
             <p className="text-zinc-300 text-sm leading-relaxed">
-              Theta Lake AccountSignal is an AI-powered corporate intelligence platform
-              built for account teams and go-to-market professionals. Search any company
-              to get a comprehensive 360-degree view covering financials, recent news,
-              competitive positioning, leadership, and M&amp;A activity.
+              Theta Lake AccountSignal delivers AI-powered corporate intelligence
+              for account teams, sales engineers, and go-to-market professionals.
+              Search any company to instantly generate a comprehensive 360-degree
+              analysis — from executive summaries and financial signals to regulatory
+              exposure and competitive landscape.
             </p>
             <p className="text-zinc-400 text-sm leading-relaxed">
-              Powered by multiple AI providers (OpenAI, Anthropic, Google, Perplexity)
-              with optional web search augmentation for real-time data.
+              Powered by your choice of AI provider (OpenAI, Anthropic Claude, Google Gemini,
+              or Perplexity) with Tavily web search for real-time data grounding. Analyses
+              are cached and shared across the team to minimize cost and maximize speed.
             </p>
           </div>
 
@@ -63,27 +65,27 @@ export function AboutModal({ open, onOpenChange, providerName, modelName }: Abou
             <ul className="text-zinc-400 text-sm space-y-1">
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-                AI-generated executive summaries and sentiment
+                AI-generated executive summaries with sentiment analysis
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-                Real-time stock data and financial overview
+                Real-time stock data, financial overview, and investor documents
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-                Competitive landscape and market positioning
+                Competitor mentions verified via web search (zero hallucination)
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-                Leadership changes and organizational signals
+                Regulatory landscape with links to governing bodies
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-                M&amp;A activity and strategic moves
+                Leadership changes, M&amp;A activity, and enforcement events
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-                Shared analysis cache across the team
+                Usage tracking, cost analytics, and team-wide caching
               </li>
             </ul>
           </div>

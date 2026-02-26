@@ -10,6 +10,46 @@ export interface ReleaseNote {
 
 export const releaseNotes: ReleaseNote[] = [
   {
+    version: '1.5.0',
+    date: '2026-02-26',
+    highlights: [
+      'Production deployment with new infrastructure',
+      'Regulatory landscape now reliably populated for all companies',
+      'Claude Sonnet 4.6 as default Anthropic model',
+      'Tavily search optimizations and fixes',
+    ],
+    changes: [
+      {
+        category: 'Added',
+        items: [
+          'Claude Sonnet 4.6 added as default Anthropic model with pricing',
+          'Regulatory landscape fallback — enriches AI results with regulatory bodies found in enforcement events',
+          'Official regulator homepage URLs for 25+ bodies (SEC, FINRA, FCA, etc.)',
+          'Meaningful descriptions for all known regulatory bodies',
+          'Full Supabase migration script (001_full_schema.sql) with all tables, RLS policies, and triggers',
+        ],
+      },
+      {
+        category: 'Fixed',
+        items: [
+          'Regulatory landscape no longer returns empty — improved AI prompt and enrichment fallback',
+          'Investor presentations restored for Tavily search path (was hardcoded to empty)',
+          'Self-referencing RLS policy on profiles table causing 500 errors',
+          'Verify-key endpoint updated from deprecated claude-3-5-haiku to current model',
+        ],
+      },
+      {
+        category: 'Changed',
+        items: [
+          'Regulatory landscape URLs now point to regulator homepages instead of news articles',
+          'AI prompt rewritten to use model knowledge for regulatory bodies instead of asking it to browse pages',
+          'Tavily investor docs results now filtered to identify presentations by keyword matching',
+          'Removed "Searching for mentions by:" implementation detail from competitor mentions UI',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.4.2',
     date: '2026-02-10',
     highlights: [
