@@ -514,9 +514,35 @@ export async function POST(request: NextRequest) {
           if (!analysis.regulatoryLandscape) analysis.regulatoryLandscape = [];
           const key = body.toUpperCase();
           const officialUrl = REGULATOR_URLS[key] || Object.entries(REGULATOR_URLS).find(([k]) => key.includes(k))?.[1];
+          // Provide meaningful descriptions for known regulators
+          const REGULATOR_DESCRIPTIONS: Record<string, string> = {
+            'SEC': 'Regulates securities offerings, broker-dealer activities, and public company disclosures',
+            'FINRA': 'Oversees broker-dealer operations and securities industry professionals',
+            'CFTC': 'Regulates derivatives and commodities trading activities',
+            'OCC': 'Supervises national bank charters and federal savings associations',
+            'FDIC': 'Insures deposits and supervises banking operations',
+            'CFPB': 'Consumer financial protection and fair lending oversight',
+            'DOJ': 'Federal law enforcement for financial crimes and antitrust',
+            'FTC': 'Consumer protection and competition enforcement',
+            'FCC': 'Regulates interstate and international communications',
+            'FEDERAL RESERVE': 'Primary consolidated supervisor for bank holding company operations',
+            'FED': 'Primary consolidated supervisor for bank holding company operations',
+            'FCA': 'Regulates UK banking and securities operations',
+            'PRA': 'Prudential supervision of UK banking and securities operations',
+            'ESMA': 'European securities and markets regulatory framework',
+            'BAFIN': 'German financial regulatory authority',
+            'MAS': 'Singapore banking and securities operations',
+            'ASIC': 'Oversees Australian financial services operations',
+            'HKMA': 'Supervises Hong Kong banking operations',
+            'AMF': 'French financial markets authority',
+            'NYDFS': 'New York state banking and financial services regulation',
+            'DOL': 'Regulates employee benefit plans and retirement accounts',
+            'STATE AG': 'State-level consumer protection and financial regulation',
+          };
+          const desc = REGULATOR_DESCRIPTIONS[key] || Object.entries(REGULATOR_DESCRIPTIONS).find(([k]) => key.includes(k))?.[1] || 'Regulatory oversight';
           analysis.regulatoryLandscape.push({
             body,
-            context: `Regulatory oversight (enforcement activity on record)`,
+            context: desc,
             url: officialUrl || undefined
           });
         }
