@@ -106,8 +106,10 @@ Format: Year | Type (Acquisition/Merger/Divestiture) | Target/Partner (real veri
 [/MA_ACTIVITY]
 
 [REGULATORY_LANDSCAPE]
-Search the company's Legal, Compliance, and About pages, as well as Wikipedia and other public sources for information about their regulatory environment.
-List the regulatory bodies that oversee or interact with "${companyName}". Include bodies such as SEC, FINRA, FCA, CFTC, ESMA, OCC, FDIC, Federal Reserve, PRA, MAS, ASIC, BaFin, AMF, and other relevant financial/industry regulators.
+Based on your knowledge of "${companyName}", its industry, business activities, and geographic operations, list ALL regulatory bodies that oversee, regulate, or interact with this company.
+IMPORTANT: This section must NOT be empty. Every company operates under regulatory oversight. Consider the company's industry (financial services, healthcare, tech, etc.), the jurisdictions it operates in, and its specific business activities (securities, banking, insurance, data privacy, etc.).
+For financial services companies, typical regulators include: SEC, FINRA, OCC, FDIC, Federal Reserve, CFPB, DOJ, State AGs, and international bodies like FCA, ESMA, PRA, MAS, ASIC, BaFin depending on geographic presence.
+For technology companies, consider: FTC, FCC, EU DPA, state privacy regulators, SEC (if public), etc.
 Format: Regulatory Body (use SHORT name/acronym only, e.g., "SEC" not "SEC (Securities and Exchange Commission)") | Brief context of the relationship (e.g., "Primary securities regulator", "Banking supervisor", "Registered broker-dealer") | Source URL (if available)
 [/REGULATORY_LANDSCAPE]
 

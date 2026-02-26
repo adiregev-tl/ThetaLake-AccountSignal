@@ -463,24 +463,22 @@ export async function POST(request: NextRequest) {
         console.log(`Found ${webSearchData.regulatoryEvents.length} regulatory events for ${companyName}, deduplicated to ${analysis.regulatoryEvents.length}`);
       }
 
-      // Fallback: populate regulatoryLandscape from regulatoryEvents if AI returned empty
-      if ((!analysis.regulatoryLandscape || analysis.regulatoryLandscape.length === 0) && analysis.regulatoryEvents && analysis.regulatoryEvents.length > 0) {
-        const bodyMap = new Map<string, string[]>();
+      // Enrich regulatoryLandscape: merge in any regulatory bodies from events not already listed
+      if (analysis.regulatoryEvents && analysis.regulatoryEvents.length > 0) {
+        const existingBodies = new Set(
+          (analysis.regulatoryLandscape || []).map(r => r.body.toUpperCase())
+        );
         for (const event of analysis.regulatoryEvents) {
           const body = event.regulatoryBody;
-          if (!body) continue;
-          if (!bodyMap.has(body)) bodyMap.set(body, []);
-          const desc = [event.eventType, event.amount, event.description].filter(Boolean).join(' - ');
-          bodyMap.get(body)!.push(desc);
+          if (!body || existingBodies.has(body.toUpperCase())) continue;
+          existingBodies.add(body.toUpperCase());
+          if (!analysis.regulatoryLandscape) analysis.regulatoryLandscape = [];
+          analysis.regulatoryLandscape.push({
+            body,
+            context: `Regulatory oversight (enforcement activity on record)`,
+            url: event.url || undefined
+          });
         }
-        analysis.regulatoryLandscape = Array.from(bodyMap.entries()).map(([body, events]) => ({
-          body,
-          context: events.length === 1
-            ? `Enforcement action: ${events[0].substring(0, 150)}`
-            : `${events.length} enforcement actions on record`,
-          url: analysis.regulatoryEvents.find(e => e.regulatoryBody === body)?.url || undefined
-        }));
-        console.log(`Built regulatoryLandscape from ${bodyMap.size} bodies in regulatory events`);
       }
 
       // Add web search sources to sources list
