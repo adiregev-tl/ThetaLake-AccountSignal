@@ -464,6 +464,45 @@ export async function POST(request: NextRequest) {
       }
 
       // Enrich regulatoryLandscape: merge in any regulatory bodies from events not already listed
+      // Use official regulator homepages, not event-specific article URLs
+      const REGULATOR_URLS: Record<string, string> = {
+        'SEC': 'https://www.sec.gov',
+        'FINRA': 'https://www.finra.org',
+        'CFTC': 'https://www.cftc.gov',
+        'OCC': 'https://www.occ.treas.gov',
+        'FDIC': 'https://www.fdic.gov',
+        'CFPB': 'https://www.consumerfinance.gov',
+        'DOJ': 'https://www.justice.gov',
+        'FTC': 'https://www.ftc.gov',
+        'FCC': 'https://www.fcc.gov',
+        'FEDERAL RESERVE': 'https://www.federalreserve.gov',
+        'FED': 'https://www.federalreserve.gov',
+        'FCA': 'https://www.fca.org.uk',
+        'PRA': 'https://www.bankofengland.co.uk/prudential-regulation',
+        'ESMA': 'https://www.esma.europa.eu',
+        'BAFIN': 'https://www.bafin.de',
+        'MAS': 'https://www.mas.gov.sg',
+        'ASIC': 'https://www.asic.gov.au',
+        'HKMA': 'https://www.hkma.gov.hk',
+        'AMF': 'https://www.amf-france.org',
+        'NYDFS': 'https://www.dfs.ny.gov',
+        'DOL': 'https://www.dol.gov',
+        'CFIUS': 'https://home.treasury.gov/policy-issues/international/the-committee-on-foreign-investment-in-the-united-states-cfius',
+        'ESG': 'https://www.sasb.org',
+        'STATE AG': 'https://www.naag.org',
+      };
+
+      // Fix URLs on existing landscape entries: replace any non-regulator URLs with official homepages
+      if (analysis.regulatoryLandscape) {
+        for (const reg of analysis.regulatoryLandscape) {
+          const key = reg.body.toUpperCase();
+          const officialUrl = REGULATOR_URLS[key] || Object.entries(REGULATOR_URLS).find(([k]) => key.includes(k))?.[1];
+          if (officialUrl) {
+            reg.url = officialUrl;
+          }
+        }
+      }
+
       if (analysis.regulatoryEvents && analysis.regulatoryEvents.length > 0) {
         const existingBodies = new Set(
           (analysis.regulatoryLandscape || []).map(r => r.body.toUpperCase())
@@ -473,10 +512,12 @@ export async function POST(request: NextRequest) {
           if (!body || existingBodies.has(body.toUpperCase())) continue;
           existingBodies.add(body.toUpperCase());
           if (!analysis.regulatoryLandscape) analysis.regulatoryLandscape = [];
+          const key = body.toUpperCase();
+          const officialUrl = REGULATOR_URLS[key] || Object.entries(REGULATOR_URLS).find(([k]) => key.includes(k))?.[1];
           analysis.regulatoryLandscape.push({
             body,
             context: `Regulatory oversight (enforcement activity on record)`,
-            url: event.url || undefined
+            url: officialUrl || undefined
           });
         }
       }
