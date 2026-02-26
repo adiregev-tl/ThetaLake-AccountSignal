@@ -31,6 +31,7 @@ export const AI_PRICING: Record<string, Record<string, ModelPricing>> = {
     default: { inputPer1M: 2.50, outputPer1M: 10.00 },
   },
   anthropic: {
+    'claude-sonnet-4-6': { inputPer1M: 3.00, outputPer1M: 15.00 },
     'claude-sonnet-4-5-20250929': { inputPer1M: 3.00, outputPer1M: 15.00 },
     'claude-opus-4-5-20251101': { inputPer1M: 5.00, outputPer1M: 25.00 },
     'claude-haiku-4-5-20251201': { inputPer1M: 0.80, outputPer1M: 4.00 },
