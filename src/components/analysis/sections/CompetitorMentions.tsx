@@ -55,12 +55,6 @@ export function CompetitorMentions({ mentions, discoveredCompetitors }: Competit
   return (
     <SectionCard title="Competitor Mentions" icon={Search} color="amber">
       <div className="space-y-4">
-        <p className="text-muted-foreground text-xs">
-          Searching for mentions by: {discoveredCompetitors && discoveredCompetitors.length > 0
-            ? [...new Set(['Smarsh', 'Global Relay', 'NICE', 'Verint', 'Arctera', 'Veritas', 'Proofpoint', 'Shield', 'Behavox', 'Digital Reasoning', 'Mimecast', 'ZL Technologies', ...discoveredCompetitors])].join(', ')
-            : 'Smarsh, Global Relay, NICE, Verint, Arctera, Veritas, Proofpoint, Shield, Behavox, Digital Reasoning, Mimecast, ZL Technologies'}
-        </p>
-
         {hasAnyMentions ? (
           <div className="space-y-4">
             {Object.entries(groupedMentions).map(([competitor, items]) => (

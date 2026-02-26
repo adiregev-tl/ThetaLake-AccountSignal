@@ -239,12 +239,21 @@ export async function POST(request: NextRequest) {
             tavilySearchRegulatoryEvents(companyName.trim(), tavilyApiKey!)
           ]);
 
+          // Split investor results into presentations vs docs
+          const allInvestorResults = investorDocsResults.map(r => ({ title: r.title, url: r.url, description: r.content }));
+          const presentationKeywords = ['presentation', 'investor day', 'investor deck', 'earnings call', 'annual meeting', 'shareholder meeting'];
+          const presentations = allInvestorResults.filter(r => {
+            const text = `${r.title} ${r.url}`.toLowerCase();
+            return presentationKeywords.some(kw => text.includes(kw));
+          });
+          const docs = allInvestorResults.filter(r => !presentations.includes(r));
+
           webSearchData = {
             news: newsResults.map(r => ({ title: r.title, url: r.url, description: r.content, date: r.published_date })),
             caseStudies: caseStudyResults.map(r => ({ title: r.title, url: r.url, description: r.content })),
             info: { sources: [] as { title: string; url: string; description: string }[] },
-            investorDocs: investorDocsResults.map(r => ({ title: r.title, url: r.url, description: r.content })),
-            investorPresentation: [] as { title: string; url: string; description: string }[],
+            investorDocs: docs.length > 0 ? docs : allInvestorResults,
+            investorPresentation: presentations,
             leadershipChanges: leadershipResults.map(r => ({ title: r.title, url: r.url, description: r.content })),
             regulatoryEvents: regulatoryResults
           };
@@ -452,6 +461,26 @@ export async function POST(request: NextRequest) {
         // Deduplicate events that refer to the same enforcement action
         analysis.regulatoryEvents = deduplicateRegulatoryEvents(rawEvents);
         console.log(`Found ${webSearchData.regulatoryEvents.length} regulatory events for ${companyName}, deduplicated to ${analysis.regulatoryEvents.length}`);
+      }
+
+      // Fallback: populate regulatoryLandscape from regulatoryEvents if AI returned empty
+      if ((!analysis.regulatoryLandscape || analysis.regulatoryLandscape.length === 0) && analysis.regulatoryEvents && analysis.regulatoryEvents.length > 0) {
+        const bodyMap = new Map<string, string[]>();
+        for (const event of analysis.regulatoryEvents) {
+          const body = event.regulatoryBody;
+          if (!body) continue;
+          if (!bodyMap.has(body)) bodyMap.set(body, []);
+          const desc = [event.eventType, event.amount, event.description].filter(Boolean).join(' - ');
+          bodyMap.get(body)!.push(desc);
+        }
+        analysis.regulatoryLandscape = Array.from(bodyMap.entries()).map(([body, events]) => ({
+          body,
+          context: events.length === 1
+            ? `Enforcement action: ${events[0].substring(0, 150)}`
+            : `${events.length} enforcement actions on record`,
+          url: analysis.regulatoryEvents.find(e => e.regulatoryBody === body)?.url || undefined
+        }));
+        console.log(`Built regulatoryLandscape from ${bodyMap.size} bodies in regulatory events`);
       }
 
       // Add web search sources to sources list
