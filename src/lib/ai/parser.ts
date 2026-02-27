@@ -329,8 +329,48 @@ function amountsAreSimilar(a1: number | null, a2: number | null): boolean {
 }
 
 /**
- * Deduplicate regulatory events by grouping similar events together
- * Events are considered duplicates if they have similar amounts and dates
+ * Extract significant words from a description for similarity matching.
+ * Strips common stop words and short words.
+ */
+function extractKeywords(text: string): Set<string> {
+  const stopWords = new Set([
+    'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
+    'of', 'with', 'by', 'from', 'as', 'into', 'its', 'was', 'were', 'has',
+    'had', 'have', 'been', 'will', 'that', 'this', 'over', 'than', 'also',
+  ]);
+  return new Set(
+    text.toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter(w => w.length > 2 && !stopWords.has(w))
+  );
+}
+
+/**
+ * Check if two descriptions have significant keyword overlap (>40% of shorter set).
+ */
+function descriptionsOverlap(desc1: string, desc2: string): boolean {
+  const kw1 = extractKeywords(desc1);
+  const kw2 = extractKeywords(desc2);
+  if (kw1.size === 0 || kw2.size === 0) return false;
+  let overlap = 0;
+  for (const w of kw1) {
+    if (kw2.has(w)) overlap++;
+  }
+  const smaller = Math.min(kw1.size, kw2.size);
+  return overlap / smaller >= 0.4;
+}
+
+// Maximum additional sources to keep per deduplicated event
+const MAX_ADDITIONAL_SOURCES = 2;
+
+/**
+ * Deduplicate regulatory events by grouping similar events together.
+ * Events are considered duplicates if:
+ *   - Amounts are similar AND dates are within 1 year, OR
+ *   - Same regulatory body AND same year AND description keyword overlap >40%, OR
+ *   - Same regulatory body AND same year AND both have no amount
+ * Additional sources are capped at 2 (3 total including primary).
  */
 export function deduplicateRegulatoryEvents(events: RegulatoryEventItem[]): RegulatoryEventItem[] {
   if (events.length <= 1) return events;
@@ -344,6 +384,7 @@ export function deduplicateRegulatoryEvents(events: RegulatoryEventItem[]): Regu
     const event = events[i];
     const eventAmount = normalizeAmount(event.amount);
     const eventYear = extractYear(event.date);
+    const eventBody = event.regulatoryBody.toUpperCase();
 
     // Find all similar events
     const similarIndices: number[] = [i];
@@ -364,16 +405,22 @@ export function deduplicateRegulatoryEvents(events: RegulatoryEventItem[]): Regu
       const otherEvent = events[j];
       const otherAmount = normalizeAmount(otherEvent.amount);
       const otherYear = extractYear(otherEvent.date);
+      const otherBody = otherEvent.regulatoryBody.toUpperCase();
 
-      // Check if amounts are similar and years match (or are within 1 year)
-      const amountMatch = eventAmount && otherAmount && amountsAreSimilar(eventAmount, otherAmount);
       const yearMatch = eventYear && otherYear && Math.abs(eventYear - otherYear) <= 1;
+      const sameBody = eventBody === otherBody;
+      const amountMatch = eventAmount && otherAmount && amountsAreSimilar(eventAmount, otherAmount);
+      const descMatch = descriptionsOverlap(event.description, otherEvent.description);
 
-      // Also check for very similar descriptions (same enforcement action)
-      const descOverlap = event.description.toLowerCase().includes(otherEvent.regulatoryBody.toLowerCase()) ||
-                         otherEvent.description.toLowerCase().includes(event.regulatoryBody.toLowerCase());
+      const isDuplicate =
+        // Case 1: Similar amounts + close dates
+        (amountMatch && yearMatch) ||
+        // Case 2: Same regulator + close dates + description overlap
+        (sameBody && yearMatch && descMatch) ||
+        // Case 3: Same regulator + close dates + neither has an amount
+        (sameBody && yearMatch && !eventAmount && !otherAmount);
 
-      if (amountMatch && (yearMatch || descOverlap)) {
+      if (isDuplicate) {
         similarIndices.push(j);
         used.add(j);
 
@@ -391,7 +438,7 @@ export function deduplicateRegulatoryEvents(events: RegulatoryEventItem[]): Regu
 
     // Create merged event
     if (sources.length > 1) {
-      // Multiple sources - pick the best primary event (prefer official sources)
+      // Multiple sources — pick the best primary event (prefer official sources)
       const officialRegulators = ['SEC', 'DOJ', 'CFTC', 'OCC', 'FINRA', 'FCA'];
       const primaryIndex = similarIndices.find(idx =>
         officialRegulators.some(reg => events[idx].regulatoryBody.toUpperCase().includes(reg))
@@ -401,7 +448,11 @@ export function deduplicateRegulatoryEvents(events: RegulatoryEventItem[]): Regu
 
       grouped.push({
         ...primaryEvent,
-        sources: sources.filter(s => s.url !== primaryEvent.url) // Don't duplicate primary URL
+        // Keep the best amount if primary doesn't have one
+        amount: primaryEvent.amount || events[similarIndices.find(idx => events[idx].amount) ?? primaryIndex].amount,
+        sources: sources
+          .filter(s => s.url !== primaryEvent.url)
+          .slice(0, MAX_ADDITIONAL_SOURCES)
       });
     } else {
       grouped.push(event);
