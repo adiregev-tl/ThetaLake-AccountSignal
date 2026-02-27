@@ -1,18 +1,43 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
+import { rateLimit, getClientIp } from '@/lib/security/rateLimit';
 
 // Routes that require authentication
-const PROTECTED_API_ROUTES = ['/api/analyze'];
+const PROTECTED_API_ROUTES = ['/api/analyze', '/api/verify-key', '/api/verify-websearch'];
 
-// Routes that require admin role
-const ADMIN_API_ROUTES = ['/api/settings'];
+// Routes that require admin role (except GET /api/settings which returns masked data)
+const ADMIN_API_ROUTES = ['/api/settings', '/api/admin', '/api/usage'];
+
+// Rate limits: [routePrefix, maxRequests, windowMs]
+const RATE_LIMITS: [string, number, number][] = [
+  ['/api/analyze', 10, 60_000],          // 10 req/min
+  ['/api/verify-key', 5, 60_000],        // 5 req/min
+  ['/api/verify-websearch', 5, 60_000],  // 5 req/min
+  ['/api/stock', 30, 60_000],            // 30 req/min
+  ['/api/company', 30, 60_000],          // 30 req/min
+];
 
 export async function middleware(request: NextRequest) {
-  const { user, response, supabase } = await updateSession(request);
-
   const path = request.nextUrl.pathname;
 
-  // Check protected API routes
+  // Rate limiting (checked before auth to block abusive traffic early)
+  for (const [route, limit, windowMs] of RATE_LIMITS) {
+    if (path.startsWith(route)) {
+      const ip = getClientIp(request);
+      const { allowed } = rateLimit(`${route}:${ip}`, limit, windowMs);
+      if (!allowed) {
+        return NextResponse.json(
+          { error: 'Too many requests. Please try again later.' },
+          { status: 429 }
+        );
+      }
+      break;
+    }
+  }
+
+  const { user, response, supabase } = await updateSession(request);
+
+  // Check protected API routes (require authentication)
   if (PROTECTED_API_ROUTES.some(route => path.startsWith(route))) {
     if (!user) {
       return NextResponse.json(
@@ -31,15 +56,16 @@ export async function middleware(request: NextRequest) {
       );
     }
 
-    // For PUT/POST requests to settings, verify admin role
-    if (request.method === 'PUT' || request.method === 'POST') {
+    // GET /api/settings is allowed for all authenticated users (handler masks sensitive data)
+    const isSettingsGet = path.startsWith('/api/settings') && request.method === 'GET';
+
+    if (!isSettingsGet) {
       const { data: profile } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', user.id)
         .single();
 
-      // Type assertion for profile data
       const profileData = profile as { role: string } | null;
 
       if (profileData?.role !== 'admin') {

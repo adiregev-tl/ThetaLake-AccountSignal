@@ -7,6 +7,7 @@ import { tavilySearchCompanyNews, tavilySearchCaseStudies, tavilySearchInvestorD
 import { claudeSearchCompanyNews, claudeSearchCaseStudies, claudeSearchCompanyInfo, claudeSearchInvestorDocs, claudeSearchInvestorPresentation, claudeSearchLeadershipChanges, claudeSearchRegulatoryEvents, claudeConsolidatedCompetitorSearch } from '@/lib/services/claudeSearch';
 import { extractCompetitorMentions } from '@/lib/services/competitorExtraction';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { parseLeadershipArticles } from '@/lib/ai/parseLeadershipNews';
 import { deduplicateRegulatoryEvents } from '@/lib/ai/parser';
 import { logUsage } from '@/lib/services/usageLogger';
@@ -180,7 +181,16 @@ export async function POST(request: NextRequest) {
         });
       }
     }
-    const { data: settings } = await supabase
+    // Use service role client for settings (API keys are admin-only in RLS)
+    const _supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const _serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const settingsClient = (_supabaseUrl && _serviceRoleKey)
+      ? createServiceClient(_supabaseUrl, _serviceRoleKey, {
+          auth: { autoRefreshToken: false, persistSession: false }
+        })
+      : supabase; // fallback if service role key not configured
+
+    const { data: settings } = await settingsClient
       .from('app_settings')
       .select('*')
       .single();
@@ -640,7 +650,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json<ApiError>(
-      { error: errorMessage },
+      { error: 'Analysis failed. Please try again later.' },
       { status: 500 }
     );
   }
