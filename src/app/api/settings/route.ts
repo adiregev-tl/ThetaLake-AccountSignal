@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 
 // Type for settings update
 interface AppSettingsUpdate {
@@ -58,8 +59,16 @@ export async function GET() {
     const profileData = profile as { role: string };
     const isAdmin = profileData.role === 'admin';
 
-    // Get settings
-    const { data: settings, error: settingsError } = await supabase
+    // Use service role client for reading settings (app_settings is admin-only in RLS)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const settingsReader = (supabaseUrl && serviceRoleKey)
+      ? createServiceClient(supabaseUrl, serviceRoleKey, {
+          auth: { autoRefreshToken: false, persistSession: false }
+        })
+      : supabase; // fallback for admins (who can still read via RLS)
+
+    const { data: settings, error: settingsError } = await settingsReader
       .from('app_settings')
       .select('*')
       .single();
