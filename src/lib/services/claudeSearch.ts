@@ -128,6 +128,21 @@ Return up to ${maxResults} most relevant results. Only include results directly 
   };
 }
 
+// Keywords that indicate an article is about technology/AI (not general company news)
+const TECH_RELEVANCE_KEYWORDS = [
+  'ai', 'artificial intelligence', 'machine learning', 'technology', 'fintech',
+  'automation', 'cloud', 'data analytics', 'digital transformation', 'cybersecurity',
+  'software', 'platform', 'tech', 'algorithm', 'api', 'infrastructure',
+  'generative ai', 'llm', 'chatbot', 'robo', 'innovation', 'modernization',
+  'saas', 'devops', 'blockchain', 'crypto', 'deepfake', 'neural',
+  'compute', 'it infrastructure', 'data management', 'compliance tech',
+];
+
+function hasTechRelevance(title: string, content: string): boolean {
+  const text = (title + ' ' + content).toLowerCase();
+  return TECH_RELEVANCE_KEYWORDS.some(kw => text.includes(kw));
+}
+
 export async function claudeSearchCompanyNews(
   companyName: string,
   apiKey: string
@@ -144,10 +159,12 @@ export async function claudeSearchCompanyNews(
   const minMatchCount = Math.max(1, Math.floor(companyWords.length * 0.5));
   return response.results.filter(r => {
     const text = (r.title + ' ' + r.content).toLowerCase();
-    // Exact full name match is always accepted
-    if (text.includes(companyLower)) return true;
-    const matchingWords = companyWords.filter(w => text.includes(w));
-    return matchingWords.length >= minMatchCount;
+    // Must mention the company
+    const mentionsCompany = text.includes(companyLower) ||
+      companyWords.filter(w => text.includes(w)).length >= minMatchCount;
+    if (!mentionsCompany) return false;
+    // Must be about technology/AI — reject general company news
+    return hasTechRelevance(r.title, r.content);
   });
 }
 

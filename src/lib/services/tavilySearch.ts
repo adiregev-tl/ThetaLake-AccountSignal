@@ -58,6 +58,21 @@ export async function tavilySearch(
   return response.json();
 }
 
+// Keywords that indicate an article is about technology/AI (not general company news)
+const TECH_RELEVANCE_KEYWORDS = [
+  'ai', 'artificial intelligence', 'machine learning', 'technology', 'fintech',
+  'automation', 'cloud', 'data analytics', 'digital transformation', 'cybersecurity',
+  'software', 'platform', 'tech', 'algorithm', 'api', 'infrastructure',
+  'generative ai', 'llm', 'chatbot', 'robo', 'innovation', 'modernization',
+  'saas', 'devops', 'blockchain', 'crypto', 'deepfake', 'neural',
+  'compute', 'it infrastructure', 'data management', 'compliance tech',
+];
+
+function hasTechRelevance(title: string, content: string): boolean {
+  const text = (title + ' ' + content).toLowerCase();
+  return TECH_RELEVANCE_KEYWORDS.some(kw => text.includes(kw));
+}
+
 export async function tavilySearchCompanyNews(
   companyName: string,
   apiKey: string
@@ -75,10 +90,12 @@ export async function tavilySearchCompanyNews(
   console.log(`[DEBUG Tavily] Raw results: ${response.results.length}, companyWords: [${companyWords}], minMatchCount: ${minMatchCount}`);
   const filtered = response.results.filter(r => {
     const text = (r.title + ' ' + r.content).toLowerCase();
-    // Exact full name match is always accepted
-    if (text.includes(companyLower)) return true;
-    const matchingWords = companyWords.filter(w => text.includes(w));
-    return matchingWords.length >= minMatchCount;
+    // Must mention the company
+    const mentionsCompany = text.includes(companyLower) ||
+      companyWords.filter(w => text.includes(w)).length >= minMatchCount;
+    if (!mentionsCompany) return false;
+    // Must be about technology/AI — reject general company news
+    return hasTechRelevance(r.title, r.content);
   });
   console.log(`[DEBUG Tavily] Filtered results: ${filtered.length}`);
   return filtered;
