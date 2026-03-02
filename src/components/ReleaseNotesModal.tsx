@@ -22,18 +22,18 @@ const categoryIcons = {
 };
 
 const categoryColors = {
-  Added: 'text-emerald-400',
-  Fixed: 'text-amber-400',
-  Changed: 'text-blue-400',
-  Removed: 'text-red-400',
+  Added: 'text-emerald-600 dark:text-emerald-400',
+  Fixed: 'text-amber-600 dark:text-amber-400',
+  Changed: 'text-blue-600 dark:text-blue-400',
+  Removed: 'text-red-600 dark:text-red-400',
 };
 
 function VersionSection({ release }: { release: ReleaseNote }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-3">
-        <span className="text-lg font-bold text-white">v{release.version}</span>
-        <span className="text-sm text-zinc-500">{release.date}</span>
+        <span className="text-lg font-bold text-foreground">v{release.version}</span>
+        <span className="text-sm text-muted-foreground">{release.date}</span>
       </div>
 
       {/* Highlights */}
@@ -41,7 +41,7 @@ function VersionSection({ release }: { release: ReleaseNote }) {
         {release.highlights.map((highlight, i) => (
           <span
             key={i}
-            className="px-2 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-400 text-xs"
+            className="px-2 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-700 dark:text-emerald-400 text-xs"
           >
             {highlight}
           </span>
@@ -62,7 +62,7 @@ function VersionSection({ release }: { release: ReleaseNote }) {
                 </div>
                 <ul className="space-y-1 pl-6">
                   {change.items.map((item, j) => (
-                    <li key={j} className="text-zinc-400 text-sm list-disc">
+                    <li key={j} className="text-muted-foreground text-sm list-disc">
                       {item}
                     </li>
                   ))}
@@ -79,9 +79,9 @@ function VersionSection({ release }: { release: ReleaseNote }) {
 export function ReleaseNotesModal({ open, onOpenChange }: ReleaseNotesModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg bg-zinc-900 border-zinc-800 max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="flex items-center gap-2 text-white">
+          <DialogTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-emerald-400" />
             Release Notes
           </DialogTitle>
@@ -93,7 +93,7 @@ export function ReleaseNotesModal({ open, onOpenChange }: ReleaseNotesModalProps
               <div key={release.version}>
                 <VersionSection release={release} />
                 {i < releaseNotes.length - 1 && (
-                  <div className="border-t border-zinc-800 mt-6" />
+                  <div className="border-t border-border mt-6" />
                 )}
               </div>
             ))}

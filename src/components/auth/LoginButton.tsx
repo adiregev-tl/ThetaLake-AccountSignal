@@ -80,12 +80,12 @@ export function LoginButton() {
           Sign in
         </Button>
       </DialogTrigger>
-      <DialogContent className="bg-zinc-900 border-zinc-800 sm:max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-white">
+          <DialogTitle>
             {emailSent ? 'Check your email' : 'Sign in to AccountSignal'}
           </DialogTitle>
-          <DialogDescription className="text-zinc-400">
+          <DialogDescription>
             {emailSent
               ? "We've sent you a magic link. Click the link in your email to sign in."
               : "Enter your email and we'll send you a magic link to sign in."}
@@ -97,15 +97,15 @@ export function LoginButton() {
             <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mb-4">
               <Check className="w-8 h-8 text-emerald-400" />
             </div>
-            <p className="text-zinc-300 text-center">
-              Magic link sent to <span className="font-medium text-white">{email}</span>
+            <p className="text-foreground text-center">
+              Magic link sent to <span className="font-medium">{email}</span>
             </p>
-            <p className="text-zinc-500 text-sm mt-2 text-center">
+            <p className="text-muted-foreground text-sm mt-2 text-center">
               The link will expire in 1 hour. Check your spam folder if you don&apos;t see it.
             </p>
             <Button
               variant="outline"
-              className="mt-4 border-zinc-700 text-zinc-300 hover:text-white"
+              className="mt-4"
               onClick={() => {
                 setEmailSent(false);
                 setEmail('');
@@ -133,10 +133,10 @@ export function LoginButton() {
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-zinc-700" />
+                <span className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-zinc-900 px-2 text-zinc-500">or</span>
+                <span className="bg-background px-2 text-muted-foreground">or</span>
               </div>
             </div>
 
@@ -147,11 +147,10 @@ export function LoginButton() {
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
                   disabled={isLoading}
                 />
                 {error && (
-                  <p className="text-red-400 text-sm">{error}</p>
+                  <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>
                 )}
               </div>
               <Button
