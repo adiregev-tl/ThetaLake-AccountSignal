@@ -63,19 +63,21 @@ export async function tavilySearchCompanyNews(
   apiKey: string
 ): Promise<TavilySearchResult[]> {
   const response = await tavilySearch(
-    `"${companyName}" AI adoption OR IT infrastructure OR digital transformation OR cloud migration OR technology strategy OR machine learning OR generative AI OR cybersecurity`,
+    `"${companyName}" technology OR AI OR digital transformation OR fintech OR automation OR cloud OR data analytics OR platform modernization OR cybersecurity OR software`,
     apiKey,
     { maxResults: 10, includeAnswer: false, topic: 'news' }
   );
   // Filter to only include results that actually mention the company
   const companyLower = companyName.toLowerCase();
   const companyWords = companyLower.split(/\s+/).filter(w => w.length > 2);
+  // For short names (1-2 words), require at least 1 word; for longer names, require ~50%
+  const minMatchCount = Math.max(1, Math.floor(companyWords.length * 0.5));
   return response.results.filter(r => {
     const text = (r.title + ' ' + r.content).toLowerCase();
-    // Require the full company name or most of its significant words to appear
+    // Exact full name match is always accepted
     if (text.includes(companyLower)) return true;
     const matchingWords = companyWords.filter(w => text.includes(w));
-    return matchingWords.length >= Math.ceil(companyWords.length * 0.6);
+    return matchingWords.length >= minMatchCount;
   });
 }
 

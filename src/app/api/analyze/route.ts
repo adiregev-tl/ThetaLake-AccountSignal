@@ -376,6 +376,7 @@ export async function POST(request: NextRequest) {
         }));
       } else {
         // Web search returned no relevant results — clear AI-generated placeholder text
+        // to prevent hallucinated articles/URLs from being displayed
         analysis.techNews = [];
       }
 
