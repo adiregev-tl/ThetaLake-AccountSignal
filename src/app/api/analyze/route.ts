@@ -147,6 +147,10 @@ export async function POST(request: NextRequest) {
         const updatedAt = new Date(cached.updated_at);
         const ageMinutes = Math.floor((Date.now() - updatedAt.getTime()) / 60000);
 
+        // If cache is expired, skip it and re-analyze
+        if (ageMinutes > CACHE_EXPIRY_MINUTES) {
+          console.log(`Cache expired for "${companyName}" (${ageMinutes} minutes old, limit ${CACHE_EXPIRY_MINUTES}). Re-analyzing.`);
+        } else {
         // Return cached data with metadata
         const cacheMetadata: CacheMetadata = {
           analyzedAt: cached.updated_at,
@@ -179,6 +183,7 @@ export async function POST(request: NextRequest) {
           provider: cached.provider as ProviderName,
           webSearchUsed: cached.web_search_used
         });
+        }
       }
     }
     // Use service role client for settings (API keys are admin-only in RLS)
@@ -366,7 +371,7 @@ export async function POST(request: NextRequest) {
 
     // If we have web search data, merge it with the analysis results
     if (webSearchData) {
-      // Replace placeholder news with real web search results
+      // Replace placeholder news with real web search results (keep AI-generated fallback if web search finds nothing)
       if (webSearchData.news.length > 0) {
         analysis.techNews = webSearchData.news.map(item => ({
           title: item.title,
@@ -374,10 +379,6 @@ export async function POST(request: NextRequest) {
           summary: item.description,
           date: item.date
         }));
-      } else {
-        // Web search returned no relevant results — clear AI-generated placeholder text
-        // to prevent hallucinated articles/URLs from being displayed
-        analysis.techNews = [];
       }
 
       // Replace placeholder case studies with real web search results
