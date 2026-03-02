@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Building2, Sparkles, History, Bookmark, Trash2, Clock, RefreshCw, Database } from 'lucide-react';
+import { Building2, History, Bookmark, Trash2, Clock, RefreshCw, Database } from 'lucide-react';
 import { Header, CompanyInfo } from '@/components/layout/Header';
 import { AnalysisDashboard } from '@/components/analysis/AnalysisDashboard';
 import { DashboardSkeleton } from '@/components/analysis/DashboardSkeleton';
@@ -487,38 +487,18 @@ export default function Home() {
                 </div>
                 <h2 className="text-2xl font-bold text-foreground mb-2">Search for a Company</h2>
                 <p className="text-muted-foreground max-w-md mb-6">
-                  Enter a company name above to get comprehensive intelligence including financials,
-                  technology trends, competitive analysis, and M&A activity.
+                  Get AI-powered intelligence on any company — competitive landscape,
+                  financials, technology adoption, and strategic signals.
                 </p>
 
-                {/* Status based on auth state */}
-                {!isAuthenticated && (
+                {!isAuthenticated ? (
                   <p className="text-amber-600 dark:text-amber-400 text-sm">
-                    Sign in above to start analyzing companies
+                    Sign in with Google to start analyzing companies
                   </p>
-                )}
-
-                {isAuthenticated && !isAdmin && (
+                ) : (
                   <p className="text-emerald-400 text-sm flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                    Ready to analyze using {PROVIDER_INFO[effectiveProvider].name}
-                  </p>
-                )}
-
-                {isAdmin && !effectiveHasKey && (
-                  <button
-                    onClick={() => setShowApiKeyModal(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors btn-scale"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    Configure {PROVIDER_INFO[effectiveProvider].name} API Key
-                  </button>
-                )}
-
-                {isAdmin && effectiveHasKey && (
-                  <p className="text-emerald-400 text-sm flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                    {PROVIDER_INFO[effectiveProvider].name} API key configured
+                    Ready to analyze
                   </p>
                 )}
 
@@ -753,7 +733,7 @@ export default function Home() {
 
       <footer className="border-t border-border mt-12">
         <div className="max-w-7xl mx-auto px-4 py-6 text-center text-muted-foreground text-sm">
-          Theta Lake AccountSignal - Corporate Intelligence Platform powered by AI
+          AccountSignal — AI-Powered Corporate Intelligence
         </div>
       </footer>
 
