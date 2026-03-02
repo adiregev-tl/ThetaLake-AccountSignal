@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Loader2, Mail, Check } from 'lucide-react';
+import { Loader2, LogIn } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -26,26 +25,10 @@ function GoogleIcon({ className }: { className?: string }) {
 }
 
 export function LoginButton() {
-  const { signInWithEmail, signInWithGoogle, isLoading } = useAuth();
-  const [email, setEmail] = useState('');
+  const { signInWithGoogle } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim() || isLoading) return;
-
-    setError(null);
-    try {
-      await signInWithEmail(email.trim());
-      setEmailSent(true);
-    } catch (err) {
-      console.error('Sign in error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to send login link');
-    }
-  };
 
   const handleGoogleSignIn = async () => {
     setError(null);
@@ -62,10 +45,8 @@ export function LoginButton() {
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
     if (!open) {
-      // Reset state when closing
-      setEmail('');
-      setEmailSent(false);
       setError(null);
+      setGoogleLoading(false);
     }
   };
 
@@ -76,103 +57,37 @@ export function LoginButton() {
           variant="outline"
           className="bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-600"
         >
-          <Mail className="w-4 h-4 mr-2" />
+          <LogIn className="w-4 h-4 mr-2" />
           Sign in
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            {emailSent ? 'Check your email' : 'Sign in to AccountSignal'}
-          </DialogTitle>
+          <DialogTitle>Sign in to AccountSignal</DialogTitle>
           <DialogDescription>
-            {emailSent
-              ? "We've sent you a magic link. Click the link in your email to sign in."
-              : "Enter your email and we'll send you a magic link to sign in."}
+            Use your Google account to sign in.
           </DialogDescription>
         </DialogHeader>
 
-        {emailSent ? (
-          <div className="flex flex-col items-center py-6">
-            <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mb-4">
-              <Check className="w-8 h-8 text-emerald-400" />
-            </div>
-            <p className="text-foreground text-center">
-              Magic link sent to <span className="font-medium">{email}</span>
-            </p>
-            <p className="text-muted-foreground text-sm mt-2 text-center">
-              The link will expire in 1 hour. Check your spam folder if you don&apos;t see it.
-            </p>
-            <Button
-              variant="outline"
-              className="mt-4"
-              onClick={() => {
-                setEmailSent(false);
-                setEmail('');
-              }}
-            >
-              Use a different email
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={googleLoading}
-              onClick={handleGoogleSignIn}
-              className="w-full !bg-white hover:!bg-zinc-100 !text-zinc-900 !border-zinc-300 font-medium"
-            >
-              {googleLoading ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <GoogleIcon className="w-4 h-4 mr-2" />
-              )}
-              Sign in with Google
-            </Button>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">or</span>
-              </div>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Input
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={isLoading}
-                />
-                {error && (
-                  <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>
-                )}
-              </div>
-              <Button
-                type="submit"
-                disabled={isLoading || !email.trim()}
-                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Sending link...
-                  </>
-                ) : (
-                  <>
-                    <Mail className="w-4 h-4 mr-2" />
-                    Send magic link
-                  </>
-                )}
-              </Button>
-            </form>
-          </div>
-        )}
+        <div className="space-y-4 py-2">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={googleLoading}
+            onClick={handleGoogleSignIn}
+            className="w-full !bg-white hover:!bg-zinc-100 !text-zinc-900 !border-zinc-300 font-medium"
+          >
+            {googleLoading ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <GoogleIcon className="w-4 h-4 mr-2" />
+            )}
+            Sign in with Google
+          </Button>
+          {error && (
+            <p className="text-red-500 dark:text-red-400 text-sm text-center">{error}</p>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
