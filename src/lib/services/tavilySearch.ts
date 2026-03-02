@@ -58,19 +58,25 @@ export async function tavilySearch(
   return response.json();
 }
 
-// Keywords that indicate an article is about technology/AI (not general company news)
-const TECH_RELEVANCE_KEYWORDS = [
-  'ai', 'artificial intelligence', 'machine learning', 'technology', 'fintech',
-  'automation', 'cloud', 'data analytics', 'digital transformation', 'cybersecurity',
-  'software', 'platform', 'tech', 'algorithm', 'api', 'infrastructure',
-  'generative ai', 'llm', 'chatbot', 'robo', 'innovation', 'modernization',
-  'saas', 'devops', 'blockchain', 'crypto', 'deepfake', 'neural',
-  'compute', 'it infrastructure', 'data management', 'compliance tech',
+// Tech-relevance filter: ensures results are about technology/AI, not general company news
+// Uses regex word boundaries for short keywords to avoid false positives
+// (e.g., "ai" must be a standalone word, not inside "said" or "maintain")
+const TECH_KEYWORD_PATTERNS: RegExp[] = [
+  /\bai\b/, /\btech\b/, /\bapi\b/, /\bllm\b/, /\bsaas\b/,
+];
+const TECH_KEYWORD_STRINGS = [
+  'artificial intelligence', 'machine learning', 'technology', 'fintech',
+  'automation', 'cloud computing', 'data analytics', 'digital transformation',
+  'cybersecurity', 'software', 'algorithm', 'it infrastructure',
+  'generative ai', 'chatbot', 'robo-advis', 'modernization',
+  'devops', 'blockchain', 'neural', 'data management', 'compliance tech',
+  'platform modernization', 'tech stack', 'deep learning',
 ];
 
 function hasTechRelevance(title: string, content: string): boolean {
   const text = (title + ' ' + content).toLowerCase();
-  return TECH_RELEVANCE_KEYWORDS.some(kw => text.includes(kw));
+  if (TECH_KEYWORD_PATTERNS.some(re => re.test(text))) return true;
+  return TECH_KEYWORD_STRINGS.some(kw => text.includes(kw));
 }
 
 export async function tavilySearchCompanyNews(
