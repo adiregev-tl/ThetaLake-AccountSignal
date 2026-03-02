@@ -10,6 +10,44 @@ export interface ReleaseNote {
 
 export const releaseNotes: ReleaseNote[] = [
   {
+    version: '1.5.1',
+    date: '2026-02-27',
+    highlights: [
+      'AI & Technology News now reliably returns results for all companies',
+      'Cache expiry implemented — stale analyses auto-refresh after 24 hours',
+      'Security hardening with rate limiting and CSP headers',
+    ],
+    changes: [
+      {
+        category: 'Fixed',
+        items: [
+          'AI & Technology News returning empty for companies like LPL Financial — broadened search queries, relaxed company name matching, and switched Tavily to general topic for wider coverage',
+          'Cache never expired — CACHE_EXPIRY_MINUTES was defined but never checked, causing stale empty results to be served indefinitely',
+          'Tech news aggressively wiped to empty when web search filter returned 0 results — now preserves AI-generated fallback content',
+          'Short/abbreviated company names returning no results due to quoted search queries',
+          'About modal scroll overflow on smaller screens',
+        ],
+      },
+      {
+        category: 'Added',
+        items: [
+          'Tech-relevance filter to prune non-technology articles from news results (regex word boundaries for short keywords like AI, cloud, digital)',
+          'Expanded tech keyword coverage for financial services: fintech, wealthtech, regtech, innovation, cloud migration, open banking, and more',
+          'Rate limiting, Content Security Policy headers, and RLS policy fixes',
+          'Regulatory event deduplication improvements with sources capped at 3',
+        ],
+      },
+      {
+        category: 'Changed',
+        items: [
+          'Tavily search topic changed from news-only to general for broader coverage (press releases, company blogs, etc.)',
+          'Tech news max results increased from 10 to 20 for wider search coverage',
+          'Removed debug logging from production code',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.5.0',
     date: '2026-02-26',
     highlights: [
