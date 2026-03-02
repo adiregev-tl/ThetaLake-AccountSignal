@@ -65,7 +65,7 @@ export async function tavilySearchCompanyNews(
   const response = await tavilySearch(
     `"${companyName}" technology OR AI OR digital transformation OR fintech OR automation OR cloud OR data analytics OR platform modernization OR cybersecurity OR software`,
     apiKey,
-    { maxResults: 10, includeAnswer: false, topic: 'news' }
+    { maxResults: 15, includeAnswer: false, topic: 'general' }
   );
   // Filter to only include results that actually mention the company
   const companyLower = companyName.toLowerCase();
