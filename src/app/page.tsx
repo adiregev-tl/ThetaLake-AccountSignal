@@ -493,7 +493,7 @@ export default function Home() {
 
                 {/* Status based on auth state */}
                 {!isAuthenticated && (
-                  <p className="text-amber-400 text-sm">
+                  <p className="text-amber-600 dark:text-amber-400 text-sm">
                     Sign in above to start analyzing companies
                   </p>
                 )}
