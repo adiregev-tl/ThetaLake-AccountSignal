@@ -72,13 +72,16 @@ export async function tavilySearchCompanyNews(
   const companyWords = companyLower.split(/\s+/).filter(w => w.length > 2);
   // For short names (1-2 words), require at least 1 word; for longer names, require ~50%
   const minMatchCount = Math.max(1, Math.floor(companyWords.length * 0.5));
-  return response.results.filter(r => {
+  console.log(`[DEBUG Tavily] Raw results: ${response.results.length}, companyWords: [${companyWords}], minMatchCount: ${minMatchCount}`);
+  const filtered = response.results.filter(r => {
     const text = (r.title + ' ' + r.content).toLowerCase();
     // Exact full name match is always accepted
     if (text.includes(companyLower)) return true;
     const matchingWords = companyWords.filter(w => text.includes(w));
     return matchingWords.length >= minMatchCount;
   });
+  console.log(`[DEBUG Tavily] Filtered results: ${filtered.length}`);
+  return filtered;
 }
 
 export async function tavilySearchCaseStudies(
