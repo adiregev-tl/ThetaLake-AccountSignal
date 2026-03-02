@@ -63,7 +63,7 @@ export async function tavilySearchCompanyNews(
   apiKey: string
 ): Promise<TavilySearchResult[]> {
   const response = await tavilySearch(
-    `"${companyName}" technology OR AI OR digital transformation OR fintech OR automation OR cloud OR data analytics OR platform modernization OR cybersecurity OR software`,
+    `${companyName} technology OR AI OR digital transformation OR fintech OR automation OR cloud OR data analytics OR platform modernization OR cybersecurity OR software`,
     apiKey,
     { maxResults: 15, includeAnswer: false, topic: 'general' }
   );

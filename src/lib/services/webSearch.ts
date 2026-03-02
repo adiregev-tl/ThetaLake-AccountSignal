@@ -69,7 +69,7 @@ export async function searchCompanyNews(
   apiKey: string
 ): Promise<WebSearchResult[]> {
   const response = await searchWeb(
-    `"${companyName}" technology OR AI OR digital transformation OR fintech OR automation OR cloud OR data analytics OR platform modernization OR cybersecurity OR software`,
+    `${companyName} technology OR AI OR digital transformation OR fintech OR automation OR cloud OR data analytics OR platform modernization OR cybersecurity OR software`,
     apiKey,
     { maxResults: 15, includeContent: false, includeAnswer: false, timeframe: 'month' }
   );
