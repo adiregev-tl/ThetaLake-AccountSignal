@@ -121,7 +121,7 @@ export function LoginButton() {
               variant="outline"
               disabled={googleLoading}
               onClick={handleGoogleSignIn}
-              className="w-full bg-white hover:bg-zinc-100 text-zinc-900 border-zinc-300 font-medium"
+              className="w-full !bg-white hover:!bg-zinc-100 !text-zinc-900 !border-zinc-300 font-medium"
             >
               {googleLoading ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
