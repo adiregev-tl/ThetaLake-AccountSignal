@@ -237,8 +237,6 @@ export async function POST(request: NextRequest) {
 
     // If provider doesn't have native web grounding and we have a web search API key,
     // fetch real-time web data to augment the analysis
-    console.log(`[DEBUG] Web search config: shouldUseWebSearch=${shouldUseWebSearch}, useTavily=${useTavily}, useClaudeSearch=${useClaudeSearch}, useWebSearchApi=${useWebSearchApi}, webSearchProvider=${webSearchProvider}, hasTavilyKey=${!!tavilyApiKey}`);
-
     if (shouldUseWebSearch) {
       try {
         if (useTavily) {
@@ -259,9 +257,6 @@ export async function POST(request: NextRequest) {
             return presentationKeywords.some(kw => text.includes(kw));
           });
           const docs = allInvestorResults.filter(r => !presentations.includes(r));
-
-          console.log(`[DEBUG] Tavily newsResults: ${newsResults.length} items`);
-          newsResults.forEach((r, i) => console.log(`[DEBUG]   news[${i}]: "${r.title}" → ${r.url}`));
 
           webSearchData = {
             news: newsResults.map(r => ({ title: r.title, url: r.url, description: r.content, date: r.published_date })),
@@ -370,7 +365,6 @@ export async function POST(request: NextRequest) {
     }
 
     // If we have web search data, merge it with the analysis results
-    console.log(`[DEBUG] webSearchData exists: ${!!webSearchData}, news count: ${webSearchData?.news?.length ?? 'N/A'}`);
     if (webSearchData) {
       // Replace placeholder news with real web search results
       if (webSearchData.news.length > 0) {

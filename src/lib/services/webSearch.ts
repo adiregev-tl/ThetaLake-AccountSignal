@@ -66,6 +66,7 @@ export async function searchWeb(
 
 const TECH_KEYWORD_PATTERNS: RegExp[] = [
   /\bai\b/, /\btech\b/, /\bapi\b/, /\bllm\b/, /\bsaas\b/,
+  /\bcloud\b/, /\bdigital\b/, /\bdata\b/,
 ];
 const TECH_KEYWORD_STRINGS = [
   'artificial intelligence', 'machine learning', 'technology', 'fintech',
@@ -74,6 +75,8 @@ const TECH_KEYWORD_STRINGS = [
   'generative ai', 'chatbot', 'robo-advis', 'modernization',
   'devops', 'blockchain', 'neural', 'data management', 'compliance tech',
   'platform modernization', 'tech stack', 'deep learning',
+  'innovation', 'wealthtech', 'regtech', 'insurtech',
+  'cloud migration', 'advisor tech', 'robotic process', 'open banking',
 ];
 
 function hasTechRelevance(title: string, content: string): boolean {
@@ -89,7 +92,7 @@ export async function searchCompanyNews(
   const response = await searchWeb(
     `${companyName} technology OR AI OR digital transformation OR fintech OR automation OR cloud OR data analytics OR platform modernization OR cybersecurity OR software`,
     apiKey,
-    { maxResults: 15, includeContent: false, includeAnswer: false, timeframe: 'month' }
+    { maxResults: 20, includeContent: false, includeAnswer: false, timeframe: 'month' }
   );
   // Filter to only include results that actually mention the company
   const companyLower = companyName.toLowerCase();

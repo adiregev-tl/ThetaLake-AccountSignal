@@ -63,6 +63,7 @@ export async function tavilySearch(
 // (e.g., "ai" must be a standalone word, not inside "said" or "maintain")
 const TECH_KEYWORD_PATTERNS: RegExp[] = [
   /\bai\b/, /\btech\b/, /\bapi\b/, /\bllm\b/, /\bsaas\b/,
+  /\bcloud\b/, /\bdigital\b/, /\bdata\b/,
 ];
 const TECH_KEYWORD_STRINGS = [
   'artificial intelligence', 'machine learning', 'technology', 'fintech',
@@ -71,6 +72,8 @@ const TECH_KEYWORD_STRINGS = [
   'generative ai', 'chatbot', 'robo-advis', 'modernization',
   'devops', 'blockchain', 'neural', 'data management', 'compliance tech',
   'platform modernization', 'tech stack', 'deep learning',
+  'innovation', 'wealthtech', 'regtech', 'insurtech',
+  'cloud migration', 'advisor tech', 'robotic process', 'open banking',
 ];
 
 function hasTechRelevance(title: string, content: string): boolean {
@@ -86,15 +89,14 @@ export async function tavilySearchCompanyNews(
   const response = await tavilySearch(
     `${companyName} technology OR AI OR digital transformation OR fintech OR automation OR cloud OR data analytics OR platform modernization OR cybersecurity OR software`,
     apiKey,
-    { maxResults: 15, includeAnswer: false, topic: 'general' }
+    { maxResults: 20, includeAnswer: false, topic: 'general' }
   );
   // Filter to only include results that actually mention the company
   const companyLower = companyName.toLowerCase();
   const companyWords = companyLower.split(/\s+/).filter(w => w.length > 2);
   // For short names (1-2 words), require at least 1 word; for longer names, require ~50%
   const minMatchCount = Math.max(1, Math.floor(companyWords.length * 0.5));
-  console.log(`[DEBUG Tavily] Raw results: ${response.results.length}, companyWords: [${companyWords}], minMatchCount: ${minMatchCount}`);
-  const filtered = response.results.filter(r => {
+  return response.results.filter(r => {
     const text = (r.title + ' ' + r.content).toLowerCase();
     // Must mention the company
     const mentionsCompany = text.includes(companyLower) ||
@@ -103,8 +105,6 @@ export async function tavilySearchCompanyNews(
     // Must be about technology/AI — reject general company news
     return hasTechRelevance(r.title, r.content);
   });
-  console.log(`[DEBUG Tavily] Filtered results: ${filtered.length}`);
-  return filtered;
 }
 
 export async function tavilySearchCaseStudies(
