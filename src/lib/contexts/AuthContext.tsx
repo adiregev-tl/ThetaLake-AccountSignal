@@ -104,6 +104,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (error) {
+      console.error('Error signing in with Google:', error);
+      throw error;
+    }
+  };
+
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
@@ -127,6 +141,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isAdmin: profile?.role === 'admin',
     isAuthenticated: !!user,
     signInWithEmail,
+    signInWithGoogle,
     signOut,
     refreshProfile,
   };
