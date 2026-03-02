@@ -10,6 +10,47 @@ export interface ReleaseNote {
 
 export const releaseNotes: ReleaseNote[] = [
   {
+    version: '2.0.0',
+    date: '2026-03-02',
+    highlights: [
+      'Google OAuth replaces magic link — one-click sign-in',
+      'Theme-aware modals — login, about, and release notes follow your light/dark preference',
+      'Refreshed landing page with cleaner, business-focused messaging',
+    ],
+    changes: [
+      {
+        category: 'Added',
+        items: [
+          'Google OAuth sign-in with one-click authentication',
+          'Theme-aware styling for login, about, and release notes modals',
+          'System theme as default — app follows your OS light/dark preference',
+        ],
+      },
+      {
+        category: 'Changed',
+        items: [
+          'Landing page copy updated to business-focused messaging',
+          'Removed API key configuration status from landing page',
+          'Footer updated to "AccountSignal — AI-Powered Corporate Intelligence"',
+        ],
+      },
+      {
+        category: 'Removed',
+        items: [
+          'Magic link (email OTP) authentication — replaced by Google OAuth',
+        ],
+      },
+      {
+        category: 'Fixed',
+        items: [
+          'Light mode text visibility in guest banner and landing page',
+          'Duplicate sign-in button removed from guest banner',
+          'Google sign-in button text color on dark backgrounds',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.5.1',
     date: '2026-02-27',
     highlights: [
