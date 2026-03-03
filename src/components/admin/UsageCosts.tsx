@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { DollarSign, TrendingUp, AlertTriangle, RefreshCw, Users, Cpu, Search, Clock, Divide } from 'lucide-react';
+import { TrendingUp, AlertTriangle, RefreshCw, Users, Cpu, Search, Clock, Divide, ChevronDown, ChevronRight, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatCost } from '@/lib/config/pricing';
@@ -49,6 +49,42 @@ interface TavilyUsageData {
   plan: string;
 }
 
+interface UserAdoptionStats {
+  userId: string;
+  email: string;
+  displayName: string | null;
+  totalAnalyses: number;
+  freshAnalyses: number;
+  cacheHits: number;
+  cacheHitRate: number;
+  uniqueCompanies: number;
+  totalCost: number;
+  estimatedCostSaved: number;
+  lastActive: string | null;
+  firstSeen: string;
+  avgResponseMs: number | null;
+  preferredProvider: string;
+  topCompanies: string[];
+}
+
+interface AdoptionSummary {
+  totalRegisteredUsers: number;
+  activeUsersInPeriod: number;
+  overallCacheHitRate: number;
+  totalCostSaved: number;
+  avgAnalysesPerActiveUser: number;
+  users: UserAdoptionStats[];
+}
+
+type AdoptionSortKey = 'email' | 'totalAnalyses' | 'freshAnalyses' | 'cacheHits' | 'cacheHitRate' | 'uniqueCompanies' | 'totalCost' | 'estimatedCostSaved';
+
+const ADOPTION_PERIODS = [
+  { key: 'today', label: 'Today' },
+  { key: 'thisWeek', label: 'This Week' },
+  { key: 'thisMonth', label: 'This Month' },
+  { key: 'allTime', label: 'All Time' },
+] as const;
+
 export function UsageCosts() {
   const [data, setData] = useState<UsageData | null>(null);
   const [tavilyUsage, setTavilyUsage] = useState<TavilyUsageData | null>(null);
@@ -56,6 +92,11 @@ export function UsageCosts() {
   const [error, setError] = useState<string | null>(null);
   const [editingThresholds, setEditingThresholds] = useState(false);
   const [thresholds, setThresholds] = useState({ daily: 10, weekly: 50, monthly: 200 });
+  const [adoptionData, setAdoptionData] = useState<AdoptionSummary | null>(null);
+  const [adoptionPeriod, setAdoptionPeriod] = useState<string>('thisMonth');
+  const [adoptionLoading, setAdoptionLoading] = useState(false);
+  const [adoptionSort, setAdoptionSort] = useState<{ key: AdoptionSortKey; dir: 'asc' | 'desc' }>({ key: 'totalAnalyses', dir: 'desc' });
+  const [expandedUser, setExpandedUser] = useState<string | null>(null);
 
   const fetchUsage = useCallback(async () => {
     try {
@@ -83,9 +124,27 @@ export function UsageCosts() {
     }
   }, []);
 
+  const fetchAdoption = useCallback(async (period: string) => {
+    setAdoptionLoading(true);
+    try {
+      const res = await fetch(`/api/usage/adoption?period=${period}`);
+      if (res.ok) {
+        setAdoptionData(await res.json());
+      }
+    } catch {
+      // Non-critical — don't block the main dashboard
+    } finally {
+      setAdoptionLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchUsage();
   }, [fetchUsage]);
+
+  useEffect(() => {
+    fetchAdoption(adoptionPeriod);
+  }, [fetchAdoption, adoptionPeriod]);
 
   const saveThresholds = async () => {
     try {
@@ -242,30 +301,17 @@ export function UsageCosts() {
         </div>
       </div>
 
-      {/* User Breakdown */}
-      <div className="grid md:grid-cols-1 gap-4">
-        {/* By User */}
-        <div className="bg-card/50 border border-border rounded-lg p-4">
-          <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
-            <Users className="w-4 h-4" />
-            By User (This Month)
-          </h3>
-          <div className="space-y-2">
-            {Object.entries(data.thisMonth.byUser).length > 0 ? (
-              Object.entries(data.thisMonth.byUser).map(([userId, stats]) => (
-                <div key={userId} className="flex justify-between text-sm">
-                  <span className="text-muted-foreground truncate max-w-[150px]">{stats.email}</span>
-                  <span className="text-foreground">
-                    {stats.requests} req · {formatCost(stats.cost)}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <p className="text-muted-foreground text-sm">No data yet</p>
-            )}
-          </div>
-        </div>
-      </div>
+      {/* User Adoption */}
+      <UserAdoptionPanel
+        data={adoptionData}
+        loading={adoptionLoading}
+        period={adoptionPeriod}
+        onPeriodChange={setAdoptionPeriod}
+        sort={adoptionSort}
+        onSortChange={setAdoptionSort}
+        expandedUser={expandedUser}
+        onToggleExpand={(uid) => setExpandedUser(expandedUser === uid ? null : uid)}
+      />
 
       {/* Thresholds */}
       <div className="bg-card/50 border border-border rounded-lg p-4">
@@ -375,6 +421,312 @@ export function UsageCosts() {
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function relativeTime(iso: string | null): string {
+  if (!iso) return '—';
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  return `${Math.floor(days / 30)}mo ago`;
+}
+
+function cacheRateColor(rate: number): string {
+  if (rate >= 0.5) return 'text-emerald-500';
+  if (rate >= 0.2) return 'text-amber-500';
+  return 'text-red-400';
+}
+
+function cacheRateBg(rate: number): string {
+  if (rate >= 0.5) return 'bg-emerald-500';
+  if (rate >= 0.2) return 'bg-amber-500';
+  return 'bg-red-400';
+}
+
+// ---------------------------------------------------------------------------
+// User Adoption Panel
+// ---------------------------------------------------------------------------
+
+function UserAdoptionPanel({
+  data,
+  loading,
+  period,
+  onPeriodChange,
+  sort,
+  onSortChange,
+  expandedUser,
+  onToggleExpand,
+}: {
+  data: AdoptionSummary | null;
+  loading: boolean;
+  period: string;
+  onPeriodChange: (p: string) => void;
+  sort: { key: AdoptionSortKey; dir: 'asc' | 'desc' };
+  onSortChange: (s: { key: AdoptionSortKey; dir: 'asc' | 'desc' }) => void;
+  expandedUser: string | null;
+  onToggleExpand: (uid: string) => void;
+}) {
+  const toggleSort = (key: AdoptionSortKey) => {
+    if (sort.key === key) {
+      onSortChange({ key, dir: sort.dir === 'asc' ? 'desc' : 'asc' });
+    } else {
+      onSortChange({ key, dir: 'desc' });
+    }
+  };
+
+  const sortedUsers = data ? [...data.users].sort((a, b) => {
+    const aVal = a[sort.key];
+    const bVal = b[sort.key];
+    const cmp = typeof aVal === 'string'
+      ? (aVal as string).localeCompare(bVal as string)
+      : (aVal as number) - (bVal as number);
+    return sort.dir === 'asc' ? cmp : -cmp;
+  }) : [];
+
+  return (
+    <div className="bg-card/50 border border-border rounded-lg p-4">
+      {/* Header + Period Tabs */}
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+          <Users className="w-4 h-4" />
+          User Adoption
+        </h3>
+        <div className="flex gap-1">
+          {ADOPTION_PERIODS.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => onPeriodChange(key)}
+              className={`px-2 py-1 text-xs rounded transition-colors ${
+                period === key
+                  ? 'bg-foreground/10 text-foreground font-medium'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-foreground/5'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <RefreshCw className="w-4 h-4 animate-spin text-muted-foreground" />
+        </div>
+      ) : !data ? (
+        <p className="text-muted-foreground text-sm py-4">Failed to load adoption data</p>
+      ) : (
+        <>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <div className="bg-background/50 border border-border/50 rounded-lg p-3">
+              <p className="text-xs text-muted-foreground mb-1">Registered</p>
+              <p className="text-lg font-bold text-foreground">{data.totalRegisteredUsers}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">all time</p>
+            </div>
+            <div className="bg-background/50 border border-border/50 rounded-lg p-3">
+              <p className="text-xs text-muted-foreground mb-1">Active</p>
+              <p className="text-lg font-bold text-foreground">{data.activeUsersInPeriod}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                {data.totalRegisteredUsers > 0
+                  ? `${Math.round((data.activeUsersInPeriod / data.totalRegisteredUsers) * 100)}% of registered`
+                  : 'this period'}
+              </p>
+            </div>
+            <div className="bg-background/50 border border-border/50 rounded-lg p-3">
+              <p className="text-xs text-muted-foreground mb-1">Cache Hit Rate</p>
+              <p className={`text-lg font-bold ${cacheRateColor(data.overallCacheHitRate)}`}>
+                {(data.overallCacheHitRate * 100).toFixed(0)}%
+              </p>
+              <div className="w-full bg-muted rounded-full h-1.5 mt-1">
+                <div
+                  className={`h-1.5 rounded-full transition-all ${cacheRateBg(data.overallCacheHitRate)}`}
+                  style={{ width: `${Math.min(100, data.overallCacheHitRate * 100)}%` }}
+                />
+              </div>
+            </div>
+            <div className="bg-background/50 border border-border/50 rounded-lg p-3">
+              <p className="text-xs text-muted-foreground mb-1">Est. Cost Saved</p>
+              <p className="text-lg font-bold text-emerald-500">{formatCost(data.totalCostSaved)}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">from cache reuse</p>
+            </div>
+          </div>
+
+          {/* User Table */}
+          {sortedUsers.length === 0 ? (
+            <p className="text-muted-foreground text-sm py-4 text-center">No users found</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border/50">
+                    <SortHeader label="User" sortKey="email" current={sort} onSort={toggleSort} />
+                    <SortHeader label="Total" sortKey="totalAnalyses" current={sort} onSort={toggleSort} align="right" />
+                    <SortHeader label="Fresh" sortKey="freshAnalyses" current={sort} onSort={toggleSort} align="right" />
+                    <SortHeader label="Cached" sortKey="cacheHits" current={sort} onSort={toggleSort} align="right" />
+                    <SortHeader label="Cache %" sortKey="cacheHitRate" current={sort} onSort={toggleSort} align="right" />
+                    <SortHeader label="Companies" sortKey="uniqueCompanies" current={sort} onSort={toggleSort} align="right" />
+                    <SortHeader label="Cost" sortKey="totalCost" current={sort} onSort={toggleSort} align="right" />
+                    <SortHeader label="Saved" sortKey="estimatedCostSaved" current={sort} onSort={toggleSort} align="right" />
+                    <th className="text-xs text-muted-foreground font-normal pb-2 text-right pr-1">Last Active</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedUsers.map((user) => (
+                    <UserRow
+                      key={user.userId}
+                      user={user}
+                      expanded={expandedUser === user.userId}
+                      onToggle={() => onToggleExpand(user.userId)}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Sort Header
+// ---------------------------------------------------------------------------
+
+function SortHeader({
+  label,
+  sortKey,
+  current,
+  onSort,
+  align = 'left',
+}: {
+  label: string;
+  sortKey: AdoptionSortKey;
+  current: { key: AdoptionSortKey; dir: 'asc' | 'desc' };
+  onSort: (key: AdoptionSortKey) => void;
+  align?: 'left' | 'right';
+}) {
+  const active = current.key === sortKey;
+  return (
+    <th
+      className={`text-xs font-normal pb-2 cursor-pointer select-none hover:text-foreground transition-colors ${
+        align === 'right' ? 'text-right pr-1' : 'text-left pl-1'
+      } ${active ? 'text-foreground' : 'text-muted-foreground'}`}
+      onClick={() => onSort(sortKey)}
+    >
+      <span className="inline-flex items-center gap-0.5">
+        {label}
+        {active ? (
+          <span className="text-[10px]">{current.dir === 'asc' ? '\u25B2' : '\u25BC'}</span>
+        ) : (
+          <ArrowUpDown className="w-2.5 h-2.5 opacity-40" />
+        )}
+      </span>
+    </th>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// User Row (with expandable detail)
+// ---------------------------------------------------------------------------
+
+function UserRow({ user, expanded, onToggle }: { user: UserAdoptionStats; expanded: boolean; onToggle: () => void }) {
+  const inactive = user.totalAnalyses === 0;
+
+  return (
+    <>
+      <tr
+        className={`border-b border-border/30 cursor-pointer hover:bg-foreground/5 transition-colors ${inactive ? 'opacity-50' : ''}`}
+        onClick={onToggle}
+      >
+        <td className="py-2 pl-1">
+          <div className="flex items-center gap-1.5">
+            {expanded ? <ChevronDown className="w-3 h-3 text-muted-foreground flex-shrink-0" /> : <ChevronRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
+            <span className="text-foreground truncate max-w-[140px]" title={user.email}>
+              {user.displayName || user.email.split('@')[0]}
+            </span>
+          </div>
+        </td>
+        <td className="py-2 text-right pr-1 text-foreground tabular-nums">{user.totalAnalyses}</td>
+        <td className="py-2 text-right pr-1 tabular-nums">
+          <span className="text-orange-400">{user.freshAnalyses}</span>
+        </td>
+        <td className="py-2 text-right pr-1 tabular-nums">
+          <span className="text-blue-400">{user.cacheHits}</span>
+        </td>
+        <td className="py-2 text-right pr-1 tabular-nums">
+          {user.totalAnalyses > 0 ? (
+            <span className={cacheRateColor(user.cacheHitRate)}>
+              {(user.cacheHitRate * 100).toFixed(0)}%
+            </span>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )}
+        </td>
+        <td className="py-2 text-right pr-1 text-foreground tabular-nums">{user.uniqueCompanies}</td>
+        <td className="py-2 text-right pr-1 text-foreground tabular-nums">{formatCost(user.totalCost)}</td>
+        <td className="py-2 text-right pr-1 tabular-nums">
+          <span className="text-emerald-500">{formatCost(user.estimatedCostSaved)}</span>
+        </td>
+        <td className="py-2 text-right pr-1 text-muted-foreground">{relativeTime(user.lastActive)}</td>
+      </tr>
+      {expanded && (
+        <tr className="border-b border-border/30 bg-foreground/[0.02]">
+          <td colSpan={9} className="py-3 px-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+              <div>
+                <span className="text-muted-foreground">Provider</span>
+                <p className="text-foreground capitalize mt-0.5">{user.preferredProvider}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Avg Response</span>
+                <p className="text-foreground mt-0.5">
+                  {user.avgResponseMs != null ? `${(user.avgResponseMs / 1000).toFixed(1)}s` : '—'}
+                </p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Member Since</span>
+                <p className="text-foreground mt-0.5">
+                  {user.firstSeen && user.firstSeen !== '—'
+                    ? new Date(user.firstSeen).toLocaleDateString()
+                    : '—'}
+                </p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Full Email</span>
+                <p className="text-foreground mt-0.5 truncate" title={user.email}>{user.email}</p>
+              </div>
+              {user.topCompanies.length > 0 && (
+                <div className="col-span-2 md:col-span-4">
+                  <span className="text-muted-foreground">Top Companies</span>
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {user.topCompanies.map((co) => (
+                      <span key={co} className="px-2 py-0.5 bg-muted/60 border border-border/50 rounded text-foreground text-xs capitalize">
+                        {co}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Cost Card
+// ---------------------------------------------------------------------------
 
 function CostCard({ title, data }: { title: string; data: UsagePeriod }) {
   return (

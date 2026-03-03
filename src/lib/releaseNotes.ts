@@ -10,6 +10,26 @@ export interface ReleaseNote {
 
 export const releaseNotes: ReleaseNote[] = [
   {
+    version: '2.0.2',
+    date: '2026-03-03',
+    highlights: [
+      'Per-user adoption stats in admin dashboard — see who is using the tool and how effectively',
+    ],
+    changes: [
+      {
+        category: 'Added',
+        items: [
+          'User Adoption panel in Usage & Costs with per-user stats: total/fresh/cached analyses, cache hit rate, unique companies, cost, estimated savings',
+          'Period tabs (Today / This Week / This Month / All Time) for adoption data',
+          'Summary cards: registered users, active users, overall cache hit rate, total cost saved',
+          'Sortable table with clickable column headers',
+          'Expandable user rows showing preferred provider, avg response time, member since, top researched companies',
+          '/api/usage/adoption admin endpoint for per-user adoption aggregation',
+        ],
+      },
+    ],
+  },
+  {
     version: '2.0.1',
     date: '2026-03-02',
     highlights: [
