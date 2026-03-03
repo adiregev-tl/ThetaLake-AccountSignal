@@ -42,8 +42,16 @@ interface UsageData {
   recentLogs: RecentLog[];
 }
 
+interface TavilyUsageData {
+  usage: number;
+  limit: number;
+  searchUsage: number;
+  plan: string;
+}
+
 export function UsageCosts() {
   const [data, setData] = useState<UsageData | null>(null);
+  const [tavilyUsage, setTavilyUsage] = useState<TavilyUsageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingThresholds, setEditingThresholds] = useState(false);
@@ -53,13 +61,21 @@ export function UsageCosts() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('/api/usage');
-      if (!response.ok) {
+      const [usageResponse, tavilyResponse] = await Promise.all([
+        fetch('/api/usage'),
+        fetch('/api/usage/tavily').catch(() => null),
+      ]);
+      if (!usageResponse.ok) {
         throw new Error('Failed to fetch usage data');
       }
-      const usageData = await response.json();
+      const usageData = await usageResponse.json();
       setData(usageData);
       setThresholds(usageData.alerts.thresholds);
+
+      if (tavilyResponse?.ok) {
+        const tavilyData = await tavilyResponse.json();
+        setTavilyUsage(tavilyData);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
@@ -141,6 +157,43 @@ export function UsageCosts() {
         <CostCard title="This Month" data={data.thisMonth} />
         <CostCard title="All Time" data={data.allTime} />
       </div>
+
+      {/* Tavily Plan Usage */}
+      {tavilyUsage && (
+        <div className="bg-card/50 border border-border rounded-lg p-4">
+          <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+            <Search className="w-4 h-4" />
+            Tavily Plan
+          </h3>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Plan</span>
+              <span className="text-foreground capitalize">{tavilyUsage.plan}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Monthly Cost</span>
+              <span className="text-foreground">$30.00/month</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Credits Used</span>
+              <span className={`text-foreground ${tavilyUsage.usage / tavilyUsage.limit > 0.9 ? 'text-amber-400' : ''}`}>
+                {tavilyUsage.usage.toLocaleString()} / {tavilyUsage.limit.toLocaleString()}
+              </span>
+            </div>
+            <div className="w-full bg-muted rounded-full h-2 mt-1">
+              <div
+                className={`h-2 rounded-full transition-all ${
+                  tavilyUsage.usage / tavilyUsage.limit > 0.9 ? 'bg-amber-500' : 'bg-emerald-500'
+                }`}
+                style={{ width: `${Math.min(100, (tavilyUsage.usage / tavilyUsage.limit) * 100)}%` }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {(tavilyUsage.limit - tavilyUsage.usage).toLocaleString()} credits remaining this billing cycle
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Breakdown Section */}
       <div className="grid md:grid-cols-2 gap-4">

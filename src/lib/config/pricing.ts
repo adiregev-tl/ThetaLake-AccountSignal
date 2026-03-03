@@ -49,7 +49,7 @@ export const AI_PRICING: Record<string, Record<string, ModelPricing>> = {
 
 // Search Provider Pricing (USD per query)
 export const SEARCH_PRICING: Record<string, SearchPricing> = {
-  tavily: { perQuery: 0.008 },
+  tavily: { perQuery: 0.0075 }, // $30/month flat for 4000 credits
   claude: { perQuery: 0.01 }, // $10 per 1000 searches
   websearchapi: { perQuery: 0.005 },
   none: { perQuery: 0 },
@@ -58,8 +58,9 @@ export const SEARCH_PRICING: Record<string, SearchPricing> = {
 // Number of Tavily queries per analysis (approximate)
 export const TAVILY_QUERIES_PER_ANALYSIS = 7; // news, case studies, info, investor docs, competitors, leadership, regulatory
 
-// Tavily free tier: 1,000 API credits per month (Researcher plan)
-export const TAVILY_FREE_MONTHLY_CREDITS = 1000;
+// Tavily production plan: 4,000 API credits per month, $30/month flat
+export const TAVILY_MONTHLY_CREDITS = 4000;
+export const TAVILY_MONTHLY_FLAT_COST = 30; // USD per month
 
 /**
  * Calculate AI cost based on token usage

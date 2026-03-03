@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getUsageSummary, checkCostAlerts, UsageSummary } from '@/lib/services/usageLogger';
-import { TAVILY_FREE_MONTHLY_CREDITS, SEARCH_PRICING } from '@/lib/config/pricing';
+import { getUsageSummary, checkCostAlerts } from '@/lib/services/usageLogger';
 
 interface UsageResponse {
   today: UsagePeriod;
@@ -86,34 +85,6 @@ export async function GET() {
       getUsageSummary(supabase, startOfAllTime, now),
       checkCostAlerts(supabase),
     ]);
-
-    // Adjust search costs for Tavily free tier (1,000 credits/month)
-    const monthlyTavilyQueries = thisMonth.bySearchProvider?.tavily?.queries || 0;
-    const tavilyCostPerQuery = SEARCH_PRICING.tavily.perQuery;
-
-    function adjustTavilyFreeTier(summary: UsageSummary, monthlyFreeQueries: number, monthlyTotalQueries: number) {
-      if (!summary.bySearchProvider?.tavily) return;
-      const periodQueries = summary.bySearchProvider.tavily.queries;
-      // If all monthly queries are free, all sub-period queries are free too
-      if (monthlyTotalQueries <= monthlyFreeQueries) {
-        const costReduction = summary.bySearchProvider.tavily.cost;
-        summary.bySearchProvider.tavily.cost = 0;
-        summary.searchCost -= costReduction;
-        summary.totalCost -= costReduction;
-      } else {
-        // Proportionally adjust: paid queries start after free tier is exhausted
-        const paidRatio = Math.max(0, monthlyTotalQueries - monthlyFreeQueries) / monthlyTotalQueries;
-        const adjustedCost = periodQueries * tavilyCostPerQuery * paidRatio;
-        const costReduction = summary.bySearchProvider.tavily.cost - adjustedCost;
-        summary.bySearchProvider.tavily.cost = adjustedCost;
-        summary.searchCost -= costReduction;
-        summary.totalCost -= costReduction;
-      }
-    }
-
-    [today, thisWeek, thisMonth, allTime].forEach(summary => {
-      adjustTavilyFreeTier(summary, TAVILY_FREE_MONTHLY_CREDITS, monthlyTavilyQueries);
-    });
 
     // Get recent logs
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

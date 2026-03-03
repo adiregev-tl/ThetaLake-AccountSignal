@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { Building2, History, Bookmark, Trash2, Clock, RefreshCw, Database } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import { Building2, History, Bookmark, Trash2, Clock, RefreshCw, Database, Search } from 'lucide-react';
 import { Header, CompanyInfo } from '@/components/layout/Header';
 import { AnalysisDashboard } from '@/components/analysis/AnalysisDashboard';
 import { DashboardSkeleton } from '@/components/analysis/DashboardSkeleton';
@@ -17,6 +17,7 @@ import { useBookmarks } from '@/lib/hooks/useBookmarks';
 import { ProviderName, AnalysisResult, PROVIDER_INFO } from '@/types/analysis';
 import { AnalyzeResponse, ApiError, CacheMetadata } from '@/types/api';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
@@ -28,6 +29,16 @@ import {
 } from '@/components/ui/dialog';
 import { Toaster, toast } from 'sonner';
 import { Users, Zap } from 'lucide-react';
+
+// Shared analysis item from the server
+interface SharedAnalysisItem {
+  id: string;
+  companyName: string;
+  provider: string;
+  sentiment: string;
+  analyzedBy: string | null;
+  updatedAt: string;
+}
 
 // Cache check response type
 interface CacheCheckInfo {
@@ -177,6 +188,10 @@ export default function Home() {
   const [showCacheDialog, setShowCacheDialog] = useState(false);
   const [pendingSearch, setPendingSearch] = useState<{ company: string; info?: CompanyInfo } | null>(null);
   const [pendingCacheInfo, setPendingCacheInfo] = useState<CacheCheckInfo | null>(null);
+  // Shared analyses state
+  const [sharedAnalyses, setSharedAnalyses] = useState<SharedAnalysisItem[]>([]);
+  const [sharedLoading, setSharedLoading] = useState(false);
+  const [sharedFilter, setSharedFilter] = useState('');
 
   const {
     getKey,
@@ -414,6 +429,41 @@ export default function Home() {
     }
   };
 
+  // Fetch shared analyses
+  const fetchSharedAnalyses = useCallback(async () => {
+    if (!isAuthenticated) return;
+    setSharedLoading(true);
+    try {
+      const res = await fetch('/api/analyses');
+      if (res.ok) {
+        const data = await res.json();
+        setSharedAnalyses(data.analyses || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch shared analyses:', err);
+    } finally {
+      setSharedLoading(false);
+    }
+  }, [isAuthenticated]);
+
+  // Lazy-load shared analyses when tab is activated
+  useEffect(() => {
+    if (activeTab === 'shared') {
+      fetchSharedAnalyses();
+    }
+  }, [activeTab, fetchSharedAnalyses]);
+
+  const handleLoadFromShared = useCallback((item: SharedAnalysisItem) => {
+    executeAnalysis(item.companyName, undefined, false);
+    setActiveTab('search');
+    toast.info(`Loading shared analysis for ${item.companyName} — no tokens used`);
+  }, [executeAnalysis]);
+
+  const handleRefreshFromShared = useCallback((item: SharedAnalysisItem) => {
+    handleSearch(item.companyName, undefined, true);
+    setActiveTab('search');
+  }, [handleSearch]);
+
   const loaded = keysLoaded && historyLoaded && bookmarksLoaded && !authLoading && serverSettingsLoaded;
 
   if (!loaded) {
@@ -477,6 +527,12 @@ export default function Home() {
               <Bookmark className="w-4 h-4 mr-2" />
               Bookmarks ({bookmarks.length})
             </TabsTrigger>
+            {isAuthenticated && (
+              <TabsTrigger value="shared" className="data-[state=active]:bg-accent">
+                <Users className="w-4 h-4 mr-2" />
+                Shared
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="search" className="mt-6">
@@ -724,6 +780,116 @@ export default function Home() {
                       </div>
                     );
                   })}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="shared" className="mt-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-foreground">Shared Analyses</h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchSharedAnalyses}
+                  disabled={sharedLoading}
+                  className="border-border text-muted-foreground"
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${sharedLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </div>
+
+              <div className="relative">
+                <Input
+                  placeholder="Filter companies..."
+                  value={sharedFilter}
+                  onChange={(e) => setSharedFilter(e.target.value)}
+                  className="pl-9"
+                />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              </div>
+
+              <p className="text-sm text-muted-foreground flex items-center gap-2">
+                <Database className="w-4 h-4" />
+                Analyses from all users. Loading these saves tokens.
+              </p>
+
+              {sharedLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : sharedAnalyses.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Database className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No shared analyses yet</p>
+                  <p className="text-sm mt-1">Analyses will appear here once anyone searches for a company</p>
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {sharedAnalyses
+                    .filter(item =>
+                      item.companyName.toLowerCase().includes(sharedFilter.toLowerCase())
+                    )
+                    .map((item) => {
+                      const updatedAt = new Date(item.updatedAt);
+                      const ageHours = Math.floor((Date.now() - updatedAt.getTime()) / 3600000);
+                      const isStale = ageHours > 24;
+
+                      return (
+                        <div
+                          key={item.id}
+                          className={`flex items-center justify-between p-4 bg-card/50 border rounded-xl hover:border-input transition-colors ${
+                            isStale ? 'border-amber-500/30' : 'border-border'
+                          }`}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div>
+                              <h3 className="font-medium text-foreground">{item.companyName}</h3>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1 flex-wrap">
+                                <Clock className="w-3 h-3" />
+                                <span className={isStale ? 'text-amber-400' : ''}>
+                                  {getRelativeTime(updatedAt.getTime())}
+                                </span>
+                                {isStale && <span className="text-amber-400 text-xs">(outdated)</span>}
+                                <span className="text-border">|</span>
+                                <span className="text-xs">{item.analyzedBy || 'Unknown'}</span>
+                                <span className="text-border">|</span>
+                                <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                  item.sentiment === 'BULLISH' ? 'bg-emerald-500/20 text-emerald-400' :
+                                  item.sentiment === 'BEARISH' ? 'bg-red-500/20 text-red-400' :
+                                  'bg-muted text-muted-foreground'
+                                }`}>
+                                  {item.sentiment}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {isStale && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleRefreshFromShared(item)}
+                                className="border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/20"
+                              >
+                                <Zap className="w-4 h-4 mr-1" />
+                                Refresh
+                              </Button>
+                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleLoadFromShared(item)}
+                              className="border-border text-muted-foreground hover:text-foreground hover:bg-accent"
+                            >
+                              View
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
                 </div>
               )}
             </div>

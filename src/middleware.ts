@@ -3,7 +3,7 @@ import { updateSession } from '@/lib/supabase/middleware';
 import { rateLimit, getClientIp } from '@/lib/security/rateLimit';
 
 // Routes that require authentication
-const PROTECTED_API_ROUTES = ['/api/analyze', '/api/verify-key', '/api/verify-websearch'];
+const PROTECTED_API_ROUTES = ['/api/analyze', '/api/verify-key', '/api/verify-websearch', '/api/analyses'];
 
 // Routes that require admin role (except GET /api/settings which returns masked data)
 const ADMIN_API_ROUTES = ['/api/settings', '/api/admin', '/api/usage'];
@@ -15,6 +15,7 @@ const RATE_LIMITS: [string, number, number][] = [
   ['/api/verify-websearch', 5, 60_000],  // 5 req/min
   ['/api/stock', 30, 60_000],            // 30 req/min
   ['/api/company', 30, 60_000],          // 30 req/min
+  ['/api/analyses', 20, 60_000],         // 20 req/min
 ];
 
 export async function middleware(request: NextRequest) {
