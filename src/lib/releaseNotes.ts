@@ -10,6 +10,35 @@ export interface ReleaseNote {
 
 export const releaseNotes: ReleaseNote[] = [
   {
+    version: '2.0.1',
+    date: '2026-03-02',
+    highlights: [
+      'Tavily production plan — real usage tracking via Tavily API',
+      'Shared analyses tab — browse and reuse analyses from all users to save tokens',
+    ],
+    changes: [
+      {
+        category: 'Added',
+        items: [
+          'Tavily Plan card in admin dashboard showing real credits used/remaining via Tavily API',
+          'Shared analyses tab — view all company analyses across users with sentiment badges',
+          'Load cached analyses from shared history to save tokens',
+          'Refresh stale shared analyses (older than 24 hours) directly from the list',
+          '/api/usage/tavily endpoint proxying Tavily usage API',
+          '/api/analyses endpoint for listing all shared analyses',
+        ],
+      },
+      {
+        category: 'Changed',
+        items: [
+          'Tavily pricing updated to production plan: 4,000 credits/month at $30/month',
+          'Per-query cost recalculated from $0.008 to $0.0075',
+          'Removed free-tier adjustment logic from usage calculations',
+        ],
+      },
+    ],
+  },
+  {
     version: '2.0.0',
     date: '2026-03-02',
     highlights: [
