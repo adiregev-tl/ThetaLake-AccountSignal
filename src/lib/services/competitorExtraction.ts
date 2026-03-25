@@ -87,7 +87,7 @@ async function callAnthropic(prompt: string, apiKey: string, model?: string): Pr
   const client = new Anthropic({ apiKey });
 
   const response = await client.messages.create({
-    model: model || 'claude-sonnet-4-5-20250929',
+    model: model || 'claude-sonnet-4-6',
     max_tokens: 2048,
     messages: [{ role: 'user', content: prompt }],
   });

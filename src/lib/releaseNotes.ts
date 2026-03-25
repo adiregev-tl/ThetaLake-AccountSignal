@@ -10,6 +10,29 @@ export interface ReleaseNote {
 
 export const releaseNotes: ReleaseNote[] = [
   {
+    version: '2.0.3',
+    date: '2026-03-25',
+    highlights: [
+      'Anthropic Claude models now use family-level identifiers — no more hardcoded dated versions that break when models rotate',
+    ],
+    changes: [
+      {
+        category: 'Fixed',
+        items: [
+          'Anthropic API calls failing due to hardcoded dated model versions (e.g., claude-sonnet-4-5-20250929) — replaced with family-level IDs (claude-sonnet-4-6, claude-opus-4-6, claude-haiku-4-5-20251001)',
+          'Claude Web Search and competitor extraction using stale model IDs instead of the configured model',
+        ],
+      },
+      {
+        category: 'Changed',
+        items: [
+          'Anthropic model selector simplified to three families: Sonnet (default), Opus, and Haiku',
+          'Removed legacy dated model entries from provider info and pricing config',
+        ],
+      },
+    ],
+  },
+  {
     version: '2.0.2',
     date: '2026-03-03',
     highlights: [

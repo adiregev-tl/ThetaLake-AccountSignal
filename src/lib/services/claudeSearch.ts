@@ -55,7 +55,7 @@ Format your response as JSON:
 Return up to ${maxResults} most relevant results. Only include results directly relevant to the query.`;
 
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 4096,
     tools: [
       {
@@ -274,7 +274,7 @@ Return as JSON array:
 Only include REAL, verified regulatory events with actual source URLs. Do not fabricate events.`;
 
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 4096,
     tools: [
       {
@@ -358,7 +358,7 @@ IMPORTANT:
 
   try {
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       tools: [
         {

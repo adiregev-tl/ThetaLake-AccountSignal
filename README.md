@@ -57,7 +57,7 @@ Results are cached for 24 hours in Supabase and shared across all users.
 
 ## Features
 
-- **Multi-provider AI**: Choose between OpenAI (GPT-5.2), Anthropic (Claude Sonnet 4.5), Google (Gemini 2.5 Flash/Pro), or Perplexity (Sonar Pro) per analysis
+- **Multi-provider AI**: Choose between OpenAI (GPT-5.2), Anthropic (Claude Sonnet/Opus/Haiku), Google (Gemini 2.5 Flash/Pro), or Perplexity (Sonar Pro) per analysis
 - **Real-time web search**: Augment AI analysis with live data from Tavily, Claude Web Search (Brave), or WebSearchAPI
 - **Company search disambiguation**: Hardcoded list of ~120 companies + Yahoo Finance fallback for unknown companies
 - **Competitor intelligence**: Searches for compliance/archiving vendors mentioned alongside the target company, with AI-powered extraction constrained to verified URLs only
@@ -219,7 +219,7 @@ marketpulse/
 │   └── middleware.ts               # Auth + admin route protection
 ├── .env.example                     # Environment variable template
 ├── next.config.ts                   # Security headers, build info injection
-├── package.json                     # v1.4.2
+├── package.json                     # v2.0.3
 └── tsconfig.json
 ```
 
@@ -319,7 +319,7 @@ CREATE TABLE app_settings (
   gemini_api_key TEXT,
   perplexity_api_key TEXT,
   openai_model TEXT DEFAULT 'gpt-4o',
-  anthropic_model TEXT DEFAULT 'claude-sonnet-4-5-20250929',
+  anthropic_model TEXT DEFAULT 'claude-sonnet-4-6',
   gemini_model TEXT DEFAULT 'gemini-2.5-flash',
   perplexity_model TEXT DEFAULT 'sonar-pro',
   web_search_provider TEXT DEFAULT 'none',
@@ -745,7 +745,7 @@ All AI providers implement the same `BaseAIProvider` interface and use an identi
 | Provider | Default Model | SDK | Web Grounding |
 |----------|--------------|-----|---------------|
 | OpenAI | `gpt-5.2` | `openai` npm package | No (uses Tavily/Claude/WebSearchAPI) |
-| Anthropic | `claude-sonnet-4-5-20250929` | `@anthropic-ai/sdk` | No (uses Tavily/Claude/WebSearchAPI) |
+| Anthropic | `claude-sonnet-4-6` | `@anthropic-ai/sdk` | No (uses Tavily/Claude/WebSearchAPI) |
 | Google Gemini | `gemini-2.5-flash` | `@google/generative-ai` | No (uses Tavily/Claude/WebSearchAPI) |
 | Perplexity | `sonar-pro` | REST API (`api.perplexity.ai`) | Yes (built-in web search) |
 
