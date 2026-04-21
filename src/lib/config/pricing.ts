@@ -32,10 +32,8 @@ export const AI_PRICING: Record<string, Record<string, ModelPricing>> = {
   },
   anthropic: {
     'claude-sonnet-4-6': { inputPer1M: 3.00, outputPer1M: 15.00 },
-    'claude-sonnet-4-5-20250929': { inputPer1M: 3.00, outputPer1M: 15.00 },
-    'claude-opus-4-5-20251101': { inputPer1M: 5.00, outputPer1M: 25.00 },
-    'claude-haiku-4-5-20251201': { inputPer1M: 0.80, outputPer1M: 4.00 },
-    'claude-sonnet-4-20250514': { inputPer1M: 3.00, outputPer1M: 15.00 },
+    'claude-opus-4-6': { inputPer1M: 5.00, outputPer1M: 25.00 },
+    'claude-haiku-4-5-20251001': { inputPer1M: 0.80, outputPer1M: 4.00 },
     default: { inputPer1M: 3.00, outputPer1M: 15.00 },
   },
   perplexity: {
@@ -49,7 +47,7 @@ export const AI_PRICING: Record<string, Record<string, ModelPricing>> = {
 
 // Search Provider Pricing (USD per query)
 export const SEARCH_PRICING: Record<string, SearchPricing> = {
-  tavily: { perQuery: 0.008 },
+  tavily: { perQuery: 0.0075 }, // $30/month flat for 4000 credits
   claude: { perQuery: 0.01 }, // $10 per 1000 searches
   websearchapi: { perQuery: 0.005 },
   none: { perQuery: 0 },
@@ -58,8 +56,9 @@ export const SEARCH_PRICING: Record<string, SearchPricing> = {
 // Number of Tavily queries per analysis (approximate)
 export const TAVILY_QUERIES_PER_ANALYSIS = 7; // news, case studies, info, investor docs, competitors, leadership, regulatory
 
-// Tavily free tier: 1,000 API credits per month (Researcher plan)
-export const TAVILY_FREE_MONTHLY_CREDITS = 1000;
+// Tavily production plan: 4,000 API credits per month, $30/month flat
+export const TAVILY_MONTHLY_CREDITS = 4000;
+export const TAVILY_MONTHLY_FLAT_COST = 30; // USD per month
 
 /**
  * Calculate AI cost based on token usage

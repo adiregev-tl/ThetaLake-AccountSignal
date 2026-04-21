@@ -55,7 +55,7 @@ Format your response as JSON:
 Return up to ${maxResults} most relevant results. Only include results directly relevant to the query.`;
 
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 4096,
     tools: [
       {
@@ -128,23 +128,49 @@ Return up to ${maxResults} most relevant results. Only include results directly 
   };
 }
 
+const TECH_KEYWORD_PATTERNS: RegExp[] = [
+  /\bai\b/, /\btech\b/, /\bapi\b/, /\bllm\b/, /\bsaas\b/,
+  /\bcloud\b/, /\bdigital\b/, /\bdata\b/,
+];
+const TECH_KEYWORD_STRINGS = [
+  'artificial intelligence', 'machine learning', 'technology', 'fintech',
+  'automation', 'cloud computing', 'data analytics', 'digital transformation',
+  'cybersecurity', 'software', 'algorithm', 'it infrastructure',
+  'generative ai', 'chatbot', 'robo-advis', 'modernization',
+  'devops', 'blockchain', 'neural', 'data management', 'compliance tech',
+  'platform modernization', 'tech stack', 'deep learning',
+  'innovation', 'wealthtech', 'regtech', 'insurtech',
+  'cloud migration', 'advisor tech', 'robotic process', 'open banking',
+];
+
+function hasTechRelevance(title: string, content: string): boolean {
+  const text = (title + ' ' + content).toLowerCase();
+  if (TECH_KEYWORD_PATTERNS.some(re => re.test(text))) return true;
+  return TECH_KEYWORD_STRINGS.some(kw => text.includes(kw));
+}
+
 export async function claudeSearchCompanyNews(
   companyName: string,
   apiKey: string
 ): Promise<ClaudeSearchResult[]> {
   const response = await claudeSearch(
-    `"${companyName}" AI adoption OR IT infrastructure OR digital transformation OR cloud migration OR technology strategy OR machine learning OR generative AI OR cybersecurity`,
+    `${companyName} technology OR AI OR digital transformation OR fintech OR automation OR cloud OR data analytics OR platform modernization OR cybersecurity OR software`,
     apiKey,
-    { maxResults: 15, includeAnswer: false }
+    { maxResults: 20, includeAnswer: false }
   );
   // Filter to only include results that actually mention the company
   const companyLower = companyName.toLowerCase();
   const companyWords = companyLower.split(/\s+/).filter(w => w.length > 2);
+  // For short names (1-2 words), require at least 1 word; for longer names, require ~50%
+  const minMatchCount = Math.max(1, Math.floor(companyWords.length * 0.5));
   return response.results.filter(r => {
     const text = (r.title + ' ' + r.content).toLowerCase();
-    if (text.includes(companyLower)) return true;
-    const matchingWords = companyWords.filter(w => text.includes(w));
-    return matchingWords.length >= Math.ceil(companyWords.length * 0.6);
+    // Must mention the company
+    const mentionsCompany = text.includes(companyLower) ||
+      companyWords.filter(w => text.includes(w)).length >= minMatchCount;
+    if (!mentionsCompany) return false;
+    // Must be about technology/AI — reject general company news
+    return hasTechRelevance(r.title, r.content);
   });
 }
 
@@ -248,7 +274,7 @@ Return as JSON array:
 Only include REAL, verified regulatory events with actual source URLs. Do not fabricate events.`;
 
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 4096,
     tools: [
       {
@@ -332,7 +358,7 @@ IMPORTANT:
 
   try {
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       tools: [
         {

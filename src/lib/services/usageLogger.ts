@@ -161,6 +161,233 @@ export async function getUsageSummary(
   return summary;
 }
 
+// ---------------------------------------------------------------------------
+// Per-user adoption stats
+// ---------------------------------------------------------------------------
+
+export interface UserAdoptionStats {
+  userId: string;
+  email: string;
+  displayName: string | null;
+  totalAnalyses: number;
+  freshAnalyses: number;
+  cacheHits: number;
+  cacheHitRate: number;           // 0–1
+  uniqueCompanies: number;
+  totalCost: number;
+  estimatedCostSaved: number;
+  lastActive: string | null;      // ISO string
+  firstSeen: string;              // profiles.created_at
+  avgResponseMs: number | null;   // fresh analyses only
+  preferredProvider: string;
+  topCompanies: string[];         // top 3
+}
+
+export interface AdoptionSummary {
+  totalRegisteredUsers: number;
+  activeUsersInPeriod: number;
+  overallCacheHitRate: number;    // 0–1
+  totalCostSaved: number;
+  avgAnalysesPerActiveUser: number;
+  users: UserAdoptionStats[];
+}
+
+/**
+ * Get per-user adoption stats for a time period
+ */
+export async function getUserAdoptionStats(
+  supabase: SupabaseClient,
+  startDate: Date,
+  endDate: Date
+): Promise<AdoptionSummary> {
+  // Fetch usage logs and profiles in parallel
+  const [logsResult, profilesResult] = await Promise.all([
+    supabase
+      .from('usage_logs')
+      .select('*')
+      .gte('created_at', startDate.toISOString())
+      .lte('created_at', endDate.toISOString())
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('profiles')
+      .select('id, email, display_name, created_at'),
+  ]);
+
+  const logs = logsResult.data || [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const profiles: Array<{ id: string; email: string; display_name: string | null; created_at: string }> = (profilesResult.data as any) || [];
+
+  // Compute global avg fresh cost for cost-saved estimation
+  let totalFreshCost = 0;
+  let totalFreshCount = 0;
+  for (const log of logs) {
+    if (!log.cached) {
+      totalFreshCost += parseFloat(log.total_cost_usd) || 0;
+      totalFreshCount++;
+    }
+  }
+  const avgFreshCost = totalFreshCount > 0 ? totalFreshCost / totalFreshCount : 0;
+
+  // Aggregate per user
+  interface UserAccum {
+    total: number;
+    fresh: number;
+    cached: number;
+    cost: number;
+    companies: Map<string, number>;
+    providers: Map<string, number>;
+    lastActive: string | null;
+    durationSumMs: number;
+    durationCount: number;
+  }
+
+  const userMap = new Map<string, UserAccum>();
+
+  for (const log of logs) {
+    const uid = log.user_id || 'anonymous';
+    let acc = userMap.get(uid);
+    if (!acc) {
+      acc = {
+        total: 0, fresh: 0, cached: 0, cost: 0,
+        companies: new Map(), providers: new Map(),
+        lastActive: null, durationSumMs: 0, durationCount: 0,
+      };
+      userMap.set(uid, acc);
+    }
+
+    acc.total++;
+    if (log.cached) {
+      acc.cached++;
+    } else {
+      acc.fresh++;
+    }
+    acc.cost += parseFloat(log.total_cost_usd) || 0;
+
+    // Company frequency
+    const companyLower = (log.company_name || '').toLowerCase();
+    acc.companies.set(companyLower, (acc.companies.get(companyLower) || 0) + 1);
+
+    // Provider frequency
+    const prov = log.ai_provider || 'unknown';
+    acc.providers.set(prov, (acc.providers.get(prov) || 0) + 1);
+
+    // Last active
+    if (!acc.lastActive || log.created_at > acc.lastActive) {
+      acc.lastActive = log.created_at;
+    }
+
+    // Duration (fresh only)
+    if (!log.cached && log.duration_ms) {
+      acc.durationSumMs += parseInt(log.duration_ms) || 0;
+      acc.durationCount++;
+    }
+  }
+
+  // Build per-user stats — include ALL registered users
+  const userStats: UserAdoptionStats[] = [];
+  let globalCacheHits = 0;
+  let globalTotal = 0;
+  let globalCostSaved = 0;
+
+  for (const profile of profiles) {
+    const acc = userMap.get(profile.id);
+    const total = acc?.total ?? 0;
+    const fresh = acc?.fresh ?? 0;
+    const cached = acc?.cached ?? 0;
+    const cacheHitRate = total > 0 ? cached / total : 0;
+    const costSaved = cached * avgFreshCost;
+
+    // Preferred provider
+    let preferredProvider = '—';
+    if (acc?.providers.size) {
+      let maxCount = 0;
+      for (const [prov, count] of acc.providers) {
+        if (count > maxCount) { maxCount = count; preferredProvider = prov; }
+      }
+    }
+
+    // Top 3 companies
+    const topCompanies: string[] = [];
+    if (acc?.companies.size) {
+      const sorted = [...acc.companies.entries()].sort((a, b) => b[1] - a[1]);
+      for (let i = 0; i < Math.min(3, sorted.length); i++) {
+        topCompanies.push(sorted[i][0]);
+      }
+    }
+
+    globalCacheHits += cached;
+    globalTotal += total;
+    globalCostSaved += costSaved;
+
+    userStats.push({
+      userId: profile.id,
+      email: profile.email,
+      displayName: profile.display_name,
+      totalAnalyses: total,
+      freshAnalyses: fresh,
+      cacheHits: cached,
+      cacheHitRate,
+      uniqueCompanies: acc?.companies.size ?? 0,
+      totalCost: acc?.cost ?? 0,
+      estimatedCostSaved: costSaved,
+      lastActive: acc?.lastActive ?? null,
+      firstSeen: profile.created_at,
+      avgResponseMs: (acc && acc.durationCount > 0) ? Math.round(acc.durationSumMs / acc.durationCount) : null,
+      preferredProvider,
+      topCompanies,
+    });
+  }
+
+  // Also include anonymous if present
+  const anonAcc = userMap.get('anonymous');
+  if (anonAcc) {
+    const costSaved = anonAcc.cached * avgFreshCost;
+    globalCacheHits += anonAcc.cached;
+    globalTotal += anonAcc.total;
+    globalCostSaved += costSaved;
+
+    let preferredProvider = '—';
+    let maxCount = 0;
+    for (const [prov, count] of anonAcc.providers) {
+      if (count > maxCount) { maxCount = count; preferredProvider = prov; }
+    }
+    const topCompanies = [...anonAcc.companies.entries()]
+      .sort((a, b) => b[1] - a[1]).slice(0, 3).map(e => e[0]);
+
+    userStats.push({
+      userId: 'anonymous',
+      email: 'Anonymous / Guest',
+      displayName: null,
+      totalAnalyses: anonAcc.total,
+      freshAnalyses: anonAcc.fresh,
+      cacheHits: anonAcc.cached,
+      cacheHitRate: anonAcc.total > 0 ? anonAcc.cached / anonAcc.total : 0,
+      uniqueCompanies: anonAcc.companies.size,
+      totalCost: anonAcc.cost,
+      estimatedCostSaved: costSaved,
+      lastActive: anonAcc.lastActive,
+      firstSeen: '—',
+      avgResponseMs: anonAcc.durationCount > 0 ? Math.round(anonAcc.durationSumMs / anonAcc.durationCount) : null,
+      preferredProvider,
+      topCompanies,
+    });
+  }
+
+  // Sort by total analyses descending
+  userStats.sort((a, b) => b.totalAnalyses - a.totalAnalyses);
+
+  const activeCount = userStats.filter(u => u.totalAnalyses > 0).length;
+
+  return {
+    totalRegisteredUsers: profiles.length,
+    activeUsersInPeriod: activeCount,
+    overallCacheHitRate: globalTotal > 0 ? globalCacheHits / globalTotal : 0,
+    totalCostSaved: globalCostSaved,
+    avgAnalysesPerActiveUser: activeCount > 0 ? globalTotal / activeCount : 0,
+    users: userStats,
+  };
+}
+
 /**
  * Check if costs exceed thresholds and return alerts
  */

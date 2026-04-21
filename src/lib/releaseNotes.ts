@@ -10,6 +10,157 @@ export interface ReleaseNote {
 
 export const releaseNotes: ReleaseNote[] = [
   {
+    version: '2.0.3',
+    date: '2026-03-25',
+    highlights: [
+      'Anthropic Claude models now use family-level identifiers — no more hardcoded dated versions that break when models rotate',
+    ],
+    changes: [
+      {
+        category: 'Fixed',
+        items: [
+          'Anthropic API calls failing due to hardcoded dated model versions (e.g., claude-sonnet-4-5-20250929) — replaced with family-level IDs (claude-sonnet-4-6, claude-opus-4-6, claude-haiku-4-5-20251001)',
+          'Claude Web Search and competitor extraction using stale model IDs instead of the configured model',
+        ],
+      },
+      {
+        category: 'Changed',
+        items: [
+          'Anthropic model selector simplified to three families: Sonnet (default), Opus, and Haiku',
+          'Removed legacy dated model entries from provider info and pricing config',
+        ],
+      },
+    ],
+  },
+  {
+    version: '2.0.2',
+    date: '2026-03-03',
+    highlights: [
+      'Per-user adoption stats in admin dashboard — see who is using the tool and how effectively',
+    ],
+    changes: [
+      {
+        category: 'Added',
+        items: [
+          'User Adoption panel in Usage & Costs with per-user stats: total/fresh/cached analyses, cache hit rate, unique companies, cost, estimated savings',
+          'Period tabs (Today / This Week / This Month / All Time) for adoption data',
+          'Summary cards: registered users, active users, overall cache hit rate, total cost saved',
+          'Sortable table with clickable column headers',
+          'Expandable user rows showing preferred provider, avg response time, member since, top researched companies',
+          '/api/usage/adoption admin endpoint for per-user adoption aggregation',
+        ],
+      },
+    ],
+  },
+  {
+    version: '2.0.1',
+    date: '2026-03-02',
+    highlights: [
+      'Tavily production plan — real usage tracking via Tavily API',
+      'Shared analyses tab — browse and reuse analyses from all users to save tokens',
+    ],
+    changes: [
+      {
+        category: 'Added',
+        items: [
+          'Tavily Plan card in admin dashboard showing real credits used/remaining via Tavily API',
+          'Shared analyses tab — view all company analyses across users with sentiment badges',
+          'Load cached analyses from shared history to save tokens',
+          'Refresh stale shared analyses (older than 24 hours) directly from the list',
+          '/api/usage/tavily endpoint proxying Tavily usage API',
+          '/api/analyses endpoint for listing all shared analyses',
+        ],
+      },
+      {
+        category: 'Changed',
+        items: [
+          'Tavily pricing updated to production plan: 4,000 credits/month at $30/month',
+          'Per-query cost recalculated from $0.008 to $0.0075',
+          'Removed free-tier adjustment logic from usage calculations',
+        ],
+      },
+    ],
+  },
+  {
+    version: '2.0.0',
+    date: '2026-03-02',
+    highlights: [
+      'Google OAuth replaces magic link — one-click sign-in',
+      'Theme-aware modals — login, about, and release notes follow your light/dark preference',
+      'Refreshed landing page with cleaner, business-focused messaging',
+    ],
+    changes: [
+      {
+        category: 'Added',
+        items: [
+          'Google OAuth sign-in with one-click authentication',
+          'Theme-aware styling for login, about, and release notes modals',
+          'System theme as default — app follows your OS light/dark preference',
+        ],
+      },
+      {
+        category: 'Changed',
+        items: [
+          'Landing page copy updated to business-focused messaging',
+          'Removed API key configuration status from landing page',
+          'Footer updated to "AccountSignal — AI-Powered Corporate Intelligence"',
+        ],
+      },
+      {
+        category: 'Removed',
+        items: [
+          'Magic link (email OTP) authentication — replaced by Google OAuth',
+        ],
+      },
+      {
+        category: 'Fixed',
+        items: [
+          'Light mode text visibility in guest banner and landing page',
+          'Duplicate sign-in button removed from guest banner',
+          'Google sign-in button text color on dark backgrounds',
+        ],
+      },
+    ],
+  },
+  {
+    version: '1.5.1',
+    date: '2026-02-27',
+    highlights: [
+      'AI & Technology News now reliably returns results for all companies',
+      'Cache expiry implemented — stale analyses auto-refresh after 24 hours',
+      'Security hardening with rate limiting and CSP headers',
+    ],
+    changes: [
+      {
+        category: 'Fixed',
+        items: [
+          'AI & Technology News returning empty for companies like LPL Financial — broadened search queries, relaxed company name matching, and switched Tavily to general topic for wider coverage',
+          'Cache never expired — CACHE_EXPIRY_MINUTES was defined but never checked, causing stale empty results to be served indefinitely',
+          'Tech news aggressively wiped to empty when web search filter returned 0 results — now preserves AI-generated fallback content',
+          'Short/abbreviated company names returning no results due to quoted search queries',
+          'About modal scroll overflow on smaller screens',
+        ],
+      },
+      {
+        category: 'Added',
+        items: [
+          'Tech-relevance filter to prune non-technology articles from news results (regex word boundaries for short keywords like AI, cloud, digital)',
+          'Expanded tech keyword coverage for financial services: fintech, wealthtech, regtech, innovation, cloud migration, open banking, and more',
+          'Rate limiting, Content Security Policy headers, and RLS policy fixes',
+          'Regulatory event deduplication improvements with sources capped at 3',
+        ],
+      },
+      {
+        category: 'Changed',
+        items: [
+          'Tavily search topic changed from news-only to general for broader coverage (press releases, company blogs, etc.)',
+          'Tech news max results increased from 10 to 20 for wider search coverage',
+          'Removed debug logging from production code',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.5.0',
     date: '2026-02-26',
     highlights: [
