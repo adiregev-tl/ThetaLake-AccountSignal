@@ -1,9 +1,10 @@
+import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 
-// GET /api/health — lightweight Supabase ping to prevent inactivity pausing
+// GET /api/health — lightweight Supabase ping to prevent inactivity pausing.
+// Uses the service role key so the query succeeds regardless of RLS policies
+// or session state (cron jobs have no user session / cookies).
 export async function GET(request: NextRequest) {
-  // Optionally verify Vercel cron secret
   const cronSecret = process.env.CRON_SECRET;
   if (cronSecret) {
     const authHeader = request.headers.get('authorization');
@@ -13,9 +14,12 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const supabase = await createClient();
+    // Service role bypasses RLS — safe here, server-only, read-only count.
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
 
-    // Lightweight query to generate database activity
     const { count, error } = await supabase
       .from('profiles')
       .select('*', { count: 'exact', head: true });
